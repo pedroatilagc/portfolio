@@ -1,0 +1,105 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+const items = Astro.props.headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+  items.length > 0 && (
+    <>
+      <details class="toc-mobile" data-toc data-toc-mobile>
+        <summary>Nesta página</summary>
+        <ol>
+          {items.map((h) => (
+            <li class={`d${h.depth}`}>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ol>
+      </details>
+
+      <nav class="toc-desktop" data-toc aria-label="Nesta página">
+        <p class="eyebrow">Nesta página</p>
+        <ol>
+          {items.map((h) => (
+            <li class={`d${h.depth}`}>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </>
+  )
+}
+
+<style>
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li.d3 {
+    padding-left: 0.9rem;
+  }
+  a {
+    display: block;
+    padding: 0.3rem 0 0.3rem 0.85rem;
+    border-left: 1px solid var(--border);
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    transition:
+      color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease;
+  }
+  a:hover {
+    color: var(--text-strong);
+  }
+  a:global(.is-active) {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+
+  .toc-mobile {
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+  .toc-mobile summary {
+    cursor: pointer;
+    padding: 0.85rem 1rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    list-style-position: inside;
+  }
+  .toc-mobile ol {
+    padding: 0 1rem 1rem;
+  }
+  .toc-desktop {
+    display: none;
+  }
+  .toc-desktop .eyebrow {
+    margin-bottom: 1rem;
+  }
+
+  @media (min-width: 1024px) {
+    .toc-mobile {
+      display: none;
+    }
+    .toc-desktop {
+      display: block;
+      position: sticky;
+      top: 6rem;
+      max-height: calc(100vh - 8rem);
+      overflow-y: auto;
+    }
+  }
+</style>

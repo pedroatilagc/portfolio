@@ -1,0 +1,67 @@
+---
+import { SITE } from '../data/site';
+---
+
+<footer class="site-footer">
+  <div class="container inner">
+    <a class="wordmark" href="/">Pedro Câmara</a>
+    <ul>
+      <li><a href="/#projetos">Projetos</a></li>
+      <li><a href="/#sobre">Sobre</a></li>
+      <li><a href={SITE.github} target="_blank" rel="noopener">GitHub</a></li>
+      {SITE.linkedin && <li><a href={SITE.linkedin} target="_blank" rel="noopener">LinkedIn</a></li>}
+    </ul>
+    <p class="copy">© {SITE.ano} Pedro Câmara</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--bg-deep);
+    border-top: 1px solid var(--border);
+    padding-block: 3rem;
+  }
+  .inner {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: 1fr;
+    align-items: center;
+  }
+  @media (min-width: 768px) {
+    .inner {
+      grid-template-columns: auto 1fr auto;
+    }
+    ul {
+      justify-content: center;
+    }
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
+    text-decoration: none;
+  }
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  ul a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: var(--text-sm);
+  }
+  ul a:hover {
+    color: var(--accent);
+  }
+  .copy {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+</style>

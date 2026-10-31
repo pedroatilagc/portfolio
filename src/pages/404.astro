@@ -1,0 +1,55 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Página não encontrada" description="Esta página não existe.">
+  <section class="container nf">
+    <div class="term" aria-hidden="true">
+      <span class="p">&gt; </span>page not found<span class="u">_</span>
+    </div>
+    <span class="eyebrow">Erro 404</span>
+    <h1>Página não encontrada</h1>
+    <p>O endereço pode ter mudado, ou nunca ter existido.</p>
+    <div class="ctas">
+      <a class="btn btn-primary" href="/">Voltar ao início <span class="arrow arrow-x" aria-hidden="true">→</span></a>
+      <a class="btn btn-secondary" href="/#projetos">Ver projetos</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    display: grid;
+    gap: 1.25rem;
+    justify-items: start;
+    padding-block: clamp(5rem, 16vw, 10rem);
+  }
+  .term {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--text-strong);
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.8rem 1.1rem;
+    margin-bottom: 1rem;
+  }
+  .p,
+  .u {
+    color: var(--accent);
+  }
+  :global(.motion-ok) .u {
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+</style>

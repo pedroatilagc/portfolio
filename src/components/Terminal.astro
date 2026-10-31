@@ -1,0 +1,110 @@
+---
+/**
+ * Janela de terminal para mostrar comandos e saídas REAIS.
+ * Uso no MDX:
+ *   <Terminal titulo="bash" linhas={[
+ *     { cmd: 'python eval_ci.py' },
+ *     { out: 'Veredito: OK' },
+ *   ]} />
+ * Com `digitar`, os comandos são digitados ao entrar no viewport.
+ */
+type Linha = { cmd: string } | { out: string };
+interface Props {
+  titulo?: string;
+  linhas: Linha[];
+  digitar?: boolean;
+  legenda?: string;
+}
+const { titulo = 'terminal', linhas, digitar = true, legenda } = Astro.props;
+---
+
+<figure class="terminal" data-terminal-type={digitar ? '' : undefined}>
+  <div class="chrome" aria-hidden="true">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="name">{titulo}</span>
+  </div>
+  <pre class="body"><code>{
+    linhas.map((l) =>
+      'cmd' in l ? (
+        <span class="line cmd" data-line="cmd" data-text={l.cmd}><span class="prompt">$ </span><span class="t-on">{l.cmd}</span><span class="t-off" /></span>
+      ) : (
+        <span class="line out" data-line="out" data-text={l.out}><span class="t-on">{l.out}</span><span class="t-off" /></span>
+      ),
+    )
+  }</code></pre>
+  {legenda && <figcaption>{legenda}</figcaption>}
+</figure>
+
+<style>
+  .terminal {
+    margin: 1.75rem 0;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .chrome {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3a3a3a;
+  }
+  .name {
+    margin-left: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+  .body {
+    margin: 0;
+    padding: 1rem 1.15rem 1.15rem;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.75;
+    overflow-x: auto;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+  .body code {
+    font: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: inherit;
+  }
+  .line {
+    display: block;
+    min-height: 1.75em;
+    white-space: pre;
+  }
+  .prompt {
+    color: var(--accent);
+  }
+  .cmd {
+    color: var(--text-strong);
+  }
+  .out {
+    color: var(--text-muted);
+  }
+  .t-off {
+    visibility: hidden;
+  }
+  .line:global(.is-pending) .prompt {
+    visibility: hidden;
+  }
+  figcaption {
+    padding: 0.7rem 1.15rem;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+</style>

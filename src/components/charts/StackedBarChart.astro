@@ -1,0 +1,160 @@
+---
+/**
+ * Barras empilhadas por dia, desenhadas no build.
+ *
+ * Escala (valor → pixel): o eixo Y vai de 0 até um máximo "bonito" (escalaY).
+ * Cada segmento empilhado começa onde o anterior terminou: guardamos um
+ * acumulado `base` e o segmento ocupa de y(base) até y(base + valor).
+ * Como no SVG o y cresce para baixo, y(v) = H − (v / max) · H.
+ */
+import './chart.css';
+import { escalaY, escalaLinear, formatar, r, type Dia, type Formato, type Serie } from './scale';
+
+interface Props {
+  titulo: string; // usado no aria-label e no caption da tabela
+  series: Serie[]; // ordem = ordem de empilhamento (de baixo para cima)
+  days: Dia[];
+  yFormat: Formato;
+  /** rótulos visíveis no topo de cada coluna (opcional) */
+  rotulosTopo?: string[];
+  resumo?: string; // frase extra para o aria-label
+}
+const { titulo, series, days, yFormat, rotulosTopo, resumo } = Astro.props;
+
+const W = 600; // largura do viewBox (esticada pelo CSS)
+const H = 200; // altura do viewBox ≈ altura real em px
+const GAP = 2; // espaço entre segmentos, na cor da superfície
+const RAIO = 3; // cantos arredondados só no topo da coluna
+
+const totais = days.map((d) => series.reduce((s, se) => s + (d.valores[se.id] ?? 0), 0));
+const maiorTotal = Math.max(...totais);
+// com rótulos no topo, deixa ~14% de folga para o texto caber acima da maior barra
+const { max, ticks, passo } = escalaY(rotulosTopo ? maiorTotal * 1.14 : maiorTotal);
+const y = escalaLinear(max, H);
+
+const banda = W / days.length;
+const larguraBarra = Math.min(banda * 0.56, 72);
+
+// retângulo com cantos superiores arredondados (a "ponta" do dado)
+function topoArredondado(x: number, yTop: number, w: number, h: number) {
+  const rr = Math.min(RAIO, h, w / 2);
+  const b = yTop + h;
+  return `M${r(x)},${r(b)}V${r(yTop + rr)}Q${r(x)},${r(yTop)} ${r(x + rr)},${r(yTop)}H${r(x + w - rr)}Q${r(x + w)},${r(yTop)} ${r(x + w)},${r(yTop + rr)}V${r(b)}Z`;
+}
+
+const colunas = days.map((d, i) => {
+  const x = i * banda + (banda - larguraBarra) / 2;
+  const presentes = series.filter((s) => (d.valores[s.id] ?? 0) > 0);
+  let base = 0;
+  const segmentos = presentes.map((s, k) => {
+    const v = d.valores[s.id];
+    const yTop = y(base + v);
+    const yBase = y(base);
+    base += v;
+    const topo = k === presentes.length - 1;
+    // abaixo do topo, encolhe o segmento GAP px para abrir o respiro entre cores
+    const h = Math.max(yBase - yTop - (topo ? 0 : GAP), 0.75);
+    const yDesenho = topo ? yTop : yTop + GAP;
+    return {
+      cor: s.cor,
+      d: topo ? topoArredondado(x, yDesenho, larguraBarra, h) : '',
+      rect: { x: r(x), y: r(yDesenho), w: r(larguraBarra), h: r(h) },
+      topo,
+    };
+  });
+  const total = totais[i];
+  const tip = {
+    dia: d.dia,
+    linhas: presentes.map((s) => [s.nome, s.cor, formatar(d.valores[s.id], yFormat)]),
+    total: presentes.length > 1 ? formatar(total, yFormat) : null,
+  };
+  const aria = `${d.dia}: ${presentes.map((s) => `${s.nome} ${formatar(d.valores[s.id], yFormat)}`).join('; ')}${presentes.length > 1 ? `; total ${formatar(total, yFormat)}` : ''}`;
+  return { dia: d.dia, segmentos, tip, aria, centro: ((i + 0.5) / days.length) * 100, esquerda: (i / days.length) * 100, topoPct: (y(total) / H) * 100 };
+});
+
+const iPico = totais.indexOf(maiorTotal);
+const somaGeral = totais.reduce((a, b) => a + b, 0);
+const ariaLabel = `${titulo}, de ${days[0].dia} a ${days[days.length - 1].dia}, em barras empilhadas por dia. Total de ${formatar(somaGeral, yFormat)}; pico em ${days[iPico].dia}, com ${formatar(maiorTotal, yFormat)}.${resumo ? ' ' + resumo : ''}`;
+---
+
+<div class="ch" data-chart>
+  <div class="ch-frame">
+    <div class="ch-y" aria-hidden="true">
+      {ticks.map((t) => <span style={`top:${r((y(t) / H) * 100)}%`}>{formatar(t, yFormat, { eixo: true, passo })}</span>)}
+    </div>
+    <div class="ch-plot" data-reveal="bars">
+      <svg class="ch-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={ariaLabel}>
+        {
+          ticks.slice(1).map((t) => (
+            <line class="ch-grid-line" x1="0" x2={W} y1={r(y(t))} y2={r(y(t))} vector-effect="non-scaling-stroke" />
+          ))
+        }
+        <line class="ch-base-line" x1="0" x2={W} y1={H} y2={H} vector-effect="non-scaling-stroke" />
+        {
+          colunas.map((c) => (
+            <g class="ch-col" data-col>
+              {c.segmentos.map((s) =>
+                s.topo ? (
+                  <path d={s.d} fill={s.cor} />
+                ) : (
+                  <rect x={s.rect.x} y={s.rect.y} width={s.rect.w} height={s.rect.h} fill={s.cor} />
+                ),
+              )}
+            </g>
+          ))
+        }
+      </svg>
+      {
+        rotulosTopo && (
+          <div aria-hidden="true">
+            {colunas.map((c, i) => (
+              <span class="ch-top" style={`left:${r(c.centro)}%;top:${r(c.topoPct)}%`}>
+                {rotulosTopo[i]}
+              </span>
+            ))}
+          </div>
+        )
+      }
+      <div class="ch-hits">
+        {
+          colunas.map((c) => (
+            <button
+              type="button"
+              class="ch-hit"
+              style={`left:${r(c.esquerda)}%;width:${r(100 / days.length)}%`}
+              aria-label={c.aria}
+              data-tip={JSON.stringify(c.tip)}
+              data-centro={r(c.centro)}
+            />
+          ))
+        }
+      </div>
+      <div class="ch-tip" hidden aria-hidden="true"></div>
+    </div>
+    <div class="ch-x" aria-hidden="true">
+      {colunas.map((c) => <span style={`left:${r(c.centro)}%`}>{c.dia}</span>)}
+    </div>
+  </div>
+
+  <div class="sr-only"><table>
+    <caption>{titulo}</caption>
+    <thead>
+      <tr>
+        <th scope="col">Dia</th>
+        {series.map((s) => <th scope="col">{s.nome}</th>)}
+        <th scope="col">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        days.map((d, i) => (
+          <tr>
+            <th scope="row">{d.dia}</th>
+            {series.map((s) => <td>{d.valores[s.id] ? formatar(d.valores[s.id], yFormat) : '—'}</td>)}
+            <td>{formatar(totais[i], yFormat)}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table></div>
+</div>

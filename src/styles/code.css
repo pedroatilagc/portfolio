@@ -1,0 +1,77 @@
+/* Shiki com o tema "css-variables": cada token sai como color: var(--astro-code-token-*).
+   Todas as cores abaixo têm contraste ≥ 4.5:1 sobre --surface (#202020). */
+:root {
+  --astro-code-foreground: rgba(247, 220, 158, 0.86);
+  --astro-code-background: var(--surface);
+  --astro-code-token-constant: #f7dc9e;
+  --astro-code-token-string: #d9c48f;
+  --astro-code-token-comment: rgba(247, 220, 158, 0.6);
+  --astro-code-token-keyword: #ff6a43;
+  --astro-code-token-parameter: #f7dc9e;
+  --astro-code-token-function: #ffb38a;
+  --astro-code-token-string-expression: #d9c48f;
+  --astro-code-token-punctuation: rgba(247, 220, 158, 0.7);
+  --astro-code-token-link: #ff6a43;
+}
+
+.code-block {
+  position: relative;
+  margin-block: 1.75rem;
+}
+
+pre.astro-code,
+.prose pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  background: var(--surface) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1.75rem 0;
+  tab-size: 2;
+}
+pre.astro-code code {
+  font-family: inherit;
+  background: none;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+.code-block:hover .copy-btn,
+.code-block:focus-within .copy-btn,
+.copy-btn:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .copy-btn {
+    opacity: 1;
+  }
+}
+.copy-btn:hover {
+  color: var(--text-strong);
+  border-color: var(--accent);
+}
+.copy-btn[data-copied] {
+  color: var(--accent-text);
+}

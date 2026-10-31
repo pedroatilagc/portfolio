@@ -1,0 +1,70 @@
+{
+  "modelos": [
+    { "id": "gpt-4o-mini", "nome": "GPT-4o-mini", "nomeTabela": "GPT-4o-mini", "cor": "#F7DC9E" },
+    { "id": "haiku", "nome": "Claude Haiku 4.5", "nomeTabela": "Claude Haiku 4.5", "cor": "#6FC3B2" },
+    { "id": "gemini", "nome": "Gemini 2.5 Flash", "nomeTabela": "Gemini 2.5 Flash", "cor": "#A78BFA" },
+    { "id": "deepseek", "nome": "DeepSeek V4 Flash", "nomeTabela": "DeepSeek V4 Flash 0423", "cor": "#4267D7" },
+    { "id": "gpt-4.1", "nome": "GPT-4.1", "nomeTabela": "GPT-4.1", "cor": "#EE562F" }
+  ],
+  "painelA": {
+    "periodo": "01/10 a 31/10/2026, GMT-3",
+    "custoTotal": 0.5066,
+    "tabela": [
+      { "modelo": "gpt-4o-mini", "min": 0.00198, "max": 0.0123, "media": 0.00685, "soma": 0.0274, "pct": 5.4 },
+      { "modelo": "haiku", "min": 0.105, "max": 0.109, "media": 0.107, "soma": 0.214, "pct": 42.3 },
+      { "modelo": "gemini", "min": 0.0116, "max": 0.0271, "media": 0.0196, "soma": 0.0588, "pct": 11.6 },
+      { "modelo": "deepseek", "min": 0.00722, "max": 0.0122, "media": 0.0097, "soma": 0.0194, "pct": 3.8 },
+      { "modelo": "gpt-4.1", "min": 0.0269, "max": 0.107, "media": 0.0622, "soma": 0.187, "pct": 36.9 }
+    ],
+    "custoDiario": [
+      { "dia": "27/10", "valores": { "gpt-4o-mini": 0.00198 } },
+      { "dia": "28/10", "valores": { "gpt-4o-mini": 0.01239, "haiku": 0.10928, "gemini": 0.0203, "deepseek": 0.01224 } },
+      { "dia": "29/10", "valores": { "gpt-4o-mini": 0.01084, "haiku": 0.1056, "gemini": 0.02719, "deepseek": 0.00725, "gpt-4.1": 0.10713 } },
+      { "dia": "30/10", "valores": { "gemini": 0.01163, "gpt-4.1": 0.05337 } },
+      { "dia": "31/10", "valores": { "gpt-4o-mini": 0.00232, "gpt-4.1": 0.02705 } }
+    ],
+    "gastoDiario": [
+      { "dia": "27/10", "valor": 0.002 },
+      { "dia": "28/10", "valor": 0.1542 },
+      { "dia": "29/10", "valor": 0.258 },
+      { "dia": "30/10", "valor": 0.065 },
+      { "dia": "31/10", "valor": 0.0294 }
+    ],
+    "byok": 0
+  },
+  "painelB": {
+    "periodo": "30/09 a 29/10/2026, GMT-3",
+    "kpis": {
+      "gastoTotal": "$0.41",
+      "requisicoes": "1.44K",
+      "volumeTokens": "657K",
+      "taxaCache": "11.3%",
+      "custoMedio": "$0.63"
+    },
+    "requisicoes": [
+      { "dia": "26/10", "valores": { "gpt-4o-mini": 5 } },
+      { "dia": "27/10", "valores": { "gpt-4o-mini": 40 } },
+      { "dia": "28/10", "valores": { "gpt-4o-mini": 220, "haiku": 188, "gemini": 126, "deepseek": 188 } },
+      { "dia": "29/10", "valores": { "gpt-4o-mini": 141, "haiku": 141, "gemini": 141, "deepseek": 141, "gpt-4.1": 121 } }
+    ],
+    "tokensSeries": [
+      { "id": "prompt", "nome": "Prompt", "cor": "#6FC3B2" },
+      { "id": "completion", "nome": "Completion", "cor": "#A78BFA" },
+      { "id": "reasoning", "nome": "Reasoning", "cor": "#EE562F" }
+    ],
+    "tokens": [
+      { "dia": "27/10", "valores": { "prompt": 9100, "completion": 1100 } },
+      { "dia": "28/10", "valores": { "prompt": 256400, "completion": 20100, "reasoning": 22400 } },
+      { "dia": "29/10", "valores": { "prompt": 315700, "completion": 20300, "reasoning": 17700 } }
+    ],
+    "cacheSeries": [
+      { "id": "uncached", "nome": "Uncached", "cor": "rgba(247, 220, 158, 0.35)" },
+      { "id": "cached", "nome": "Cached", "cor": "#EE562F" }
+    ],
+    "cache": [
+      { "dia": "27/10", "valores": { "uncached": 9100 } },
+      { "dia": "28/10", "valores": { "uncached": 222200, "cached": 34200 } },
+      { "dia": "29/10", "valores": { "uncached": 284200, "cached": 31500 } }
+    ]
+  }
+}

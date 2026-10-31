@@ -1,0 +1,116 @@
+---
+import { STACK } from '../data/site';
+---
+
+<section class="marquee" data-marquee aria-label="Tecnologias que uso">
+  <div class="container head">
+    <span class="eyebrow">Stack</span>
+    <button type="button" class="toggle" data-marquee-toggle aria-pressed="false">Pausar faixa</button>
+  </div>
+  <div class="viewport">
+    <!-- O conteúdo é duplicado: a faixa anda até -50% (exatamente uma cópia) e recomeça sem emenda visível. -->
+    <div class="track">
+      <ul class="group">
+        {STACK.map((s) => <li>{s}</li>)}
+      </ul>
+      <ul class="group" aria-hidden="true">
+        {STACK.map((s) => <li>{s}</li>)}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .marquee {
+    border-block: 1px solid var(--border);
+    padding-block: 1.25rem 1.5rem;
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  .toggle {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    padding: 0.45rem 0.9rem;
+    min-height: 2.25rem;
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease;
+  }
+  .toggle:hover {
+    color: var(--text-strong);
+    border-color: var(--accent);
+  }
+  .viewport {
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .track {
+    display: flex;
+    width: max-content;
+    animation: marquee 40s linear infinite;
+  }
+  .group {
+    display: flex;
+    flex-shrink: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .group li {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    letter-spacing: -0.02em;
+    color: var(--text-strong);
+    white-space: nowrap;
+    padding-inline: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+  }
+  .group li::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .marquee[data-paused] .track {
+    animation-play-state: paused;
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .track {
+      animation: none;
+      width: auto;
+    }
+    .viewport {
+      mask-image: none;
+      padding-inline: var(--gutter);
+    }
+    .group {
+      flex-wrap: wrap;
+      row-gap: 0.5rem;
+    }
+    .group[aria-hidden='true'],
+    .toggle {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,67 @@
+---
+/**
+ * Diagrama Mermaid pré-renderizado em SVG (sem JS no cliente).
+ * O SVG é gerado a partir de src/diagrams/<nome>.mmd com `npm run diagrams`
+ * e versionado no repo; aqui ele é embutido inline no HTML no build.
+ */
+interface Props {
+  nome: string;
+  legenda?: string;
+  alt: string;
+}
+const { nome, legenda, alt } = Astro.props;
+
+const svgs = import.meta.glob<string>('../diagrams/*.svg', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const svg = svgs[`../diagrams/${nome}.svg`];
+if (!svg) throw new Error(`Diagrama "${nome}" não encontrado. Rode \`npm run diagrams\`.`);
+
+// role="img" + aria-label no wrapper: o leitor de tela recebe a descrição, não os nós soltos
+const html = svg
+  .replace(/\s(role|aria-roledescription)="[^"]*"/g, '')
+  .replace(/<svg\b/, `<svg role="img" aria-label="${alt.replace(/"/g, '&quot;')}"`);
+---
+
+<figure class="diagrama" data-reveal="clip">
+  <div class="canvas" set:html={html} />
+  {legenda && <figcaption>{legenda}</figcaption>}
+</figure>
+
+<style>
+  .diagrama {
+    margin: 2rem 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: clamp(1rem, 4vw, 2rem);
+  }
+  .canvas {
+    display: flex;
+    justify-content: safe center;
+    overflow-x: auto;
+  }
+  .canvas :global(svg) {
+    height: auto;
+    /* no mobile o diagrama rola dentro da moldura em vez de encolher até ficar ilegível */
+    min-width: 26rem;
+  }
+  /* O Mermaid mede o texto no build com a fonte de fallback (a Inter não está
+     instalada no Chromium headless) e fixa a largura de cada rótulo. A Inter é
+     ~7% mais larga, então o rótulo na página fica um pouco menor que o medido. */
+  .canvas :global(.nodeLabel) {
+    font-size: 13.75px;
+  }
+  .canvas :global(foreignObject) {
+    overflow: visible;
+  }
+  figcaption {
+    margin-top: 1rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-align: center;
+  }
+</style>

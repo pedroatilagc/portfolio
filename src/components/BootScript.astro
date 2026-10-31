@@ -1,0 +1,44 @@
+---
+/**
+ * Script INLINE e síncrono no <head>.
+ *
+ * Por que inline: o navegador executa este código enquanto ainda está lendo o <head>,
+ * ANTES de pintar o primeiro pixel do <body>. Se ele fosse um módulo normal (type=module,
+ * que é deferido), o navegador pintaria a página, e só depois a intro esconderia tudo:
+ * o usuário veria um "flash" do conteúdo (FOUC). Aqui as classes já estão no <html>
+ * quando o CSS é aplicado pela primeira vez.
+ *
+ * is:inline diz ao Astro para não processar/empacotar o script: ele vai literal para o HTML.
+ */
+---
+
+<script is:inline>
+  (function () {
+    var html = document.documentElement;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Com o ClientRouter, o Astro troca os atributos do <html> a cada navegação
+    // (e pode re-executar scripts inline). A 1ª execução decide a intro; nas
+    // seguintes só reaplicamos .motion-ok, sem nunca reativar a intro.
+    if (window.__pcBooted) return;
+    window.__pcBooted = true;
+
+    if (!reduce) html.classList.add('motion-ok');
+
+    var played = true;
+    try {
+      played = sessionStorage.getItem('pc_intro_played') === '1';
+    } catch (e) {
+      played = true; // sessionStorage bloqueado (modo privado): trata como "já tocou"
+    }
+    if (location.pathname === '/' && !played && !reduce) {
+      html.classList.add('intro-loading');
+    }
+
+    document.addEventListener('astro:after-swap', function () {
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.documentElement.classList.add('motion-ok');
+      }
+    });
+  })();
+</script>

@@ -1,0 +1,67 @@
+---
+interface Fonte {
+  titulo: string;
+  url: string;
+  nota?: string;
+}
+interface Props {
+  itens: Fonte[];
+}
+const { itens } = Astro.props;
+---
+
+<ol class="fontes">
+  {
+    itens.map((f) => (
+      <li>
+        <a href={f.url} target="_blank" rel="noopener">
+          {f.titulo}
+        </a>
+        {f.nota && <span class="nota"> — {f.nota}</span>}
+        <span class="url">{f.url.replace(/^https?:\/\//, '')}</span>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .fontes {
+    counter-reset: fonte;
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: grid;
+    gap: 1rem;
+  }
+  li {
+    counter-increment: fonte;
+    position: relative;
+    padding-left: 2.5rem;
+  }
+  li::before {
+    content: counter(fonte, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 0.2em;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--accent);
+  }
+  a {
+    color: var(--text-strong);
+    text-decoration-color: var(--accent-40);
+  }
+  a:hover {
+    color: var(--accent);
+  }
+  .nota {
+    color: var(--text);
+  }
+  .url {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+  }
+</style>

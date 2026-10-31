@@ -1,0 +1,55 @@
+/*
+  Design tokens — fonte da verdade do visual.
+  Ajustes de contraste (WCAG AA, 4.5:1 para texto normal), calculados sobre cada fundo:
+  - --text-muted: 0.55 → 0.60. A 0.55 o texto sobre --surface-2 (hover de card) dava ~4.4:1.
+    A 0.60 dá ≥ 5:1 em --bg, --bg-deep, --surface e --surface-2.
+  - Texto de pill/badge usa --accent-text (= --accent-hover). O --accent sobre
+    --accent-soft aplicado em --surface dava ~4.1:1; o #FF6A43 dá ~5:1.
+  Os demais pares passam: --text-strong ≈ 13:1, --text ≈ 9:1, --accent sobre --bg ≈ 5:1,
+  --on-accent sobre --accent ≈ 5:1.
+*/
+:root {
+  color-scheme: dark;
+
+  --bg: #191919;
+  --bg-deep: #111111;
+  --surface: #202020;
+  --surface-2: #262626;
+  --border: #2e2e2e;
+  --accent: #ee562f;
+  --accent-hover: #ff6a43;
+  --accent-soft: rgba(238, 86, 47, 0.12);
+  --accent-40: rgba(238, 86, 47, 0.4);
+  --accent-text: #ff6a43;
+  --text-strong: #f7dc9e;
+  --text: rgba(247, 220, 158, 0.82);
+  --text-muted: rgba(247, 220, 158, 0.6);
+  --on-accent: #191919;
+
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: clamp(1.75rem, 3.5vw, 2.25rem);
+  --text-h1: clamp(2.75rem, 7vw, 4.5rem);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  --container: 64rem;
+  --gutter: 24px;
+
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 0.18s;
+  --dur-base: 0.3s;
+  --dur-slow: 0.6s;
+}

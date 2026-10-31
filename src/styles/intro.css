@@ -1,0 +1,69 @@
+/* Estilos do overlay da intro (criado via JS em src/scripts/intro.ts) */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-deep);
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  /* o body está com visibility:hidden (html.intro-loading); o overlay se força visível */
+  visibility: visible;
+  will-change: transform;
+}
+
+.intro-terminal {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 2;
+  color: var(--text-strong);
+  white-space: pre;
+  /* largura fixa da linha mais longa: o bloco não "anda" enquanto digita */
+  width: 30ch;
+  max-width: 100%;
+}
+.intro-line {
+  min-height: 2em;
+}
+.intro-prompt,
+.intro-underscore {
+  color: var(--accent);
+}
+.intro-underscore {
+  opacity: 0;
+}
+
+.intro-mark {
+  display: none; /* vira flex no SWAP */
+  align-items: flex-end;
+  gap: 0.08em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.75rem, 17vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+.intro-name-wrap {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.18em;
+  white-space: nowrap;
+}
+.intro-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: center;
+}
+.intro-cursor {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  line-height: 1;
+  padding-bottom: 0.3em;
+}

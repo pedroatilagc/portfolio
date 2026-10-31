@@ -1,0 +1,196 @@
+/*
+  Anatomia de um gráfico:
+  - o SVG contém só as marcas (grid, barras, área) e estica na largura do painel
+    (preserveAspectRatio="none");
+  - eixos, rótulos, pontos e tooltip são HTML posicionado em % por cima dele.
+  Assim o texto mantém o tamanho real em qualquer largura (um <text> dentro de
+  um SVG que encolhe para 340px ficaria com 5px no celular).
+*/
+.ch {
+  --ch-h: 200px;
+  --ch-y-w: 3.25rem;
+  position: relative;
+}
+@media (max-width: 640px) {
+  .ch {
+    --ch-h: 170px;
+  }
+}
+
+.ch-frame {
+  display: grid;
+  grid-template-columns: var(--ch-y-w) minmax(0, 1fr);
+  grid-template-rows: var(--ch-h) auto;
+}
+
+/* ---------- eixos ---------- */
+.ch-y,
+.ch-x {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ch-y span {
+  position: absolute;
+  right: 0.6rem;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.ch-x {
+  grid-column: 2;
+  height: 1.75rem;
+}
+.ch-x span {
+  position: absolute;
+  top: 0.65rem;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* ---------- área de plotagem ---------- */
+.ch-plot {
+  position: relative;
+  height: var(--ch-h);
+}
+.ch-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  display: block;
+}
+.ch-grid-line {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.ch-base-line {
+  stroke: #3a3a3a;
+  stroke-width: 1;
+}
+
+/* colunas: crescem a partir da base (o reveal anima scaleY 0 → 1) */
+.ch-col {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: opacity var(--dur-fast) ease;
+}
+.ch[data-active] .ch-col:not(.is-active) {
+  opacity: 0.4;
+}
+
+/* rótulos visíveis no topo da coluna (compensação de contraste, ver Cache) */
+.ch-top {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 6px));
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-strong);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* pontos da área (HTML para não deformar com o preserveAspectRatio="none") */
+.ch-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.ch[data-active] .ch-dot.is-active {
+  transform: translate(-50%, -50%) scale(1.35);
+}
+.ch-cross {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--text-muted);
+  opacity: 0;
+  pointer-events: none;
+}
+.ch[data-active] .ch-cross.is-active {
+  opacity: 0.5;
+}
+
+/* ---------- alvos de hover/foco: uma faixa por dia, maior que a barra ---------- */
+.ch-hits {
+  position: absolute;
+  inset: 0;
+}
+.ch-hit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  border-radius: var(--radius-sm);
+}
+.ch-hit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ---------- tooltip ---------- */
+.ch-tip {
+  position: absolute;
+  top: 0;
+  z-index: 5;
+  min-width: 11rem;
+  max-width: 16rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text);
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.ch-tip[hidden] {
+  display: none;
+}
+.ch-tip-dia {
+  font-family: var(--font-mono);
+  color: var(--text-strong);
+  margin-bottom: 0.35rem;
+}
+.ch-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ch-tip-row .v {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.ch-tip-total {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+
+/* bolinha de cor (legenda, tooltip, tabela) */
+.ch-sw {
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--sw);
+}

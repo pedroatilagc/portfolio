@@ -1,0 +1,155 @@
+---
+/**
+ * Seção "Custos e uso (OpenRouter)" do senderix-eval.
+ * Reproduz os painéis do dashboard da OpenRouter como componentes e SVG gerados
+ * no build, a partir de src/data/senderix-eval-openrouter.json.
+ */
+import dados from '../data/senderix-eval-openrouter.json';
+import ChartPanel from './charts/ChartPanel.astro';
+import KpiRow from './charts/KpiRow.astro';
+import StackedBarChart from './charts/StackedBarChart.astro';
+import AreaChart from './charts/AreaChart.astro';
+import ModelBreakdown from './charts/ModelBreakdown.astro';
+
+const { modelos, painelA: A, painelB: B } = dados;
+
+// Checagem no build: a soma das barras diárias de cada modelo precisa bater com a
+// coluna "soma" oficial da OpenRouter (tolerância de $0.001). Se o JSON for
+// editado e deixar de bater, o build falha em vez de publicar números incoerentes.
+for (const linha of A.tabela) {
+  const somaBarras = A.custoDiario.reduce(
+    (s, d) => s + ((d.valores as Record<string, number>)[linha.modelo] ?? 0),
+    0,
+  );
+  if (Math.abs(somaBarras - linha.soma) > 0.001) {
+    throw new Error(
+      `[CustosOpenRouter] ${linha.modelo}: barras somam ${somaBarras.toFixed(5)}, tabela diz ${linha.soma}`,
+    );
+  }
+}
+
+const porId = Object.fromEntries(modelos.map((m) => [m.id, m]));
+const pct = (id: string) => A.tabela.find((l) => l.modelo === id)!.pct;
+const soma = (id: string) => A.tabela.find((l) => l.modelo === id)!.soma;
+const dupla = +(pct('haiku') + pct('gpt-4.1')).toFixed(1);
+const pico = A.gastoDiario.reduce((a, b) => (b.valor > a.valor ? b : a));
+const modelosNoPico = Object.keys(A.custoDiario.find((d) => d.dia === pico.dia)!.valores).length;
+const unicoComTodos =
+  modelosNoPico === modelos.length &&
+  A.custoDiario.filter((d) => Object.keys(d.valores).length === modelos.length).length === 1;
+
+// Parágrafo de leitura: só fatos dos dados. Montado como string porque, no template,
+// o Astro descarta a quebra de linha ao lado de uma {expressão} e cola as palavras.
+const m = (id: string) => porId[id].nome;
+const leitura =
+  `De 01 a 31/10, o custo total foi de ≈ $${A.custoTotal.toFixed(2)}. ` +
+  `O modelo mais caro foi o ${m('haiku')}, com $${soma('haiku')} (${pct('haiku')}% do total), ` +
+  `seguido do ${m('gpt-4.1')}, o juiz do eval, com $${soma('gpt-4.1')} (${pct('gpt-4.1')}%): juntos, ${dupla}% do gasto. ` +
+  `${m('gemini')} somou $${soma('gemini')} (${pct('gemini')}%), ${m('gpt-4o-mini')} $${soma('gpt-4o-mini')} ` +
+  `(${pct('gpt-4o-mini')}%) e ${m('deepseek')} $${soma('deepseek')} (${pct('deepseek')}%). ` +
+  `O dia de maior gasto foi ${pico.dia}, com $${pico.valor.toFixed(3)}` +
+  `${unicoComTodos ? ', o único em que os cinco modelos foram chamados' : ''}.`;
+
+// rótulo visível no topo das colunas de cache: % do prompt que veio do cache
+const rotulosCache = B.cache.map((d) => {
+  const v = d.valores as Record<string, number>;
+  const total = (v.uncached ?? 0) + (v.cached ?? 0);
+  return `${(((v.cached ?? 0) / total) * 100).toFixed(1)}%`;
+});
+
+const kpis = [
+  { valor: `≈ $${A.custoTotal.toFixed(2)}`, label: 'Custo total · 01–31/10' },
+  { valor: B.kpis.gastoTotal, label: 'Gasto total · 30/09–29/10' },
+  { valor: B.kpis.requisicoes, label: 'Requisições' },
+  { valor: B.kpis.volumeTokens, label: 'Volume de tokens' },
+  { valor: B.kpis.taxaCache, label: 'Taxa de cache' },
+  { valor: B.kpis.custoMedio, label: 'Custo médio por 1M tokens' },
+];
+---
+
+<div class="custos">
+  <p>
+    Todas as chamadas do eval (classificadores e juiz) passaram pelo OpenRouter. Os painéis abaixo reproduzem o
+    dashboard de Activity da conta no período do projeto.
+  </p>
+
+  <div class="bloco">
+    <KpiRow itens={kpis} />
+    <p class="fonte">
+      Fonte: OpenRouter — painel de Activity ({A.periodo} para o custo total; {B.periodo} para os demais)
+    </p>
+  </div>
+
+  <ChartPanel titulo="Custo por modelo" periodo={A.periodo} series={modelos} largo>
+    <StackedBarChart titulo="Custo diário por modelo (US$)" series={modelos} days={A.custoDiario} yFormat="usd" />
+    <ModelBreakdown linhas={A.tabela} modelos={modelos} caption="Custo por modelo no período: mínimo, máximo, média, soma e participação no total" />
+  </ChartPanel>
+
+  <div class="grid">
+    <ChartPanel titulo="Gasto diário" periodo={A.periodo} series={[{ id: 'spend', nome: 'OpenRouter Spend', cor: '#EE562F' }]}>
+      <AreaChart id="gasto" titulo="Gasto diário total (US$)" nomeSerie="OpenRouter Spend" cor="#EE562F" pontos={A.gastoDiario} yFormat="usd" />
+      <p class="obs">BYOK: ${A.byok}</p>
+    </ChartPanel>
+
+    <ChartPanel titulo="Requisições por modelo" periodo={B.periodo} series={modelos}>
+      <StackedBarChart titulo="Requisições por dia e modelo" series={modelos} days={B.requisicoes} yFormat="int" />
+    </ChartPanel>
+
+    <ChartPanel titulo="Tokens por tipo" periodo={B.periodo} series={B.tokensSeries}>
+      <StackedBarChart titulo="Tokens por dia e tipo" series={B.tokensSeries} days={B.tokens} yFormat="tokens" />
+    </ChartPanel>
+
+    <ChartPanel titulo="Cache de prompt" periodo={B.periodo} series={B.cacheSeries}>
+      <StackedBarChart
+        titulo="Tokens de prompt por dia, com e sem cache"
+        series={B.cacheSeries}
+        days={B.cache}
+        yFormat="tokens"
+        rotulosTopo={rotulosCache}
+        resumo={`Fração cacheada por dia: ${B.cache.map((d, i) => `${d.dia} ${rotulosCache[i]}`).join(', ')}.`}
+      />
+      <p class="obs">Rótulo no topo: % dos tokens de prompt servidos do cache.</p>
+    </ChartPanel>
+  </div>
+
+  <p>{leitura}</p>
+
+  <p class="nota">
+    Valores diários extraídos dos gráficos do painel; totais conforme a OpenRouter. O Painel B cobre até 29/10.
+  </p>
+</div>
+
+<style>
+  .custos {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .custos > :global(*) {
+    margin: 0;
+  }
+  .bloco {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 768px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .fonte,
+  .nota,
+  .obs {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+  .obs {
+    margin: 0;
+  }
+</style>

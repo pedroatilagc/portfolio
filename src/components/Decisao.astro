@@ -1,0 +1,47 @@
+---
+interface Props {
+  titulo: string;
+}
+const { titulo } = Astro.props;
+---
+
+<aside class="decisao" aria-label={`Decisão técnica: ${titulo}`}>
+  <p class="label">Decisão</p>
+  <p class="titulo">{titulo}</p>
+  <div class="corpo"><slot /></div>
+</aside>
+
+<style>
+  .decisao {
+    margin: 2rem 0;
+    padding: 1.25rem 1.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+  .label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+  .titulo {
+    margin: 0.4rem 0 0;
+    color: var(--text-strong);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .corpo {
+    margin-top: 0.6rem;
+    font-size: 0.97rem;
+  }
+  .corpo :global(p + p) {
+    margin-top: 0.7em;
+  }
+  .corpo :global(strong) {
+    color: var(--text-strong);
+  }
+</style>

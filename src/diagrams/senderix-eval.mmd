@@ -1,0 +1,15 @@
+%% Fluxo do eval no CI. Adaptado do diagrama do README do senderix-eval.
+flowchart TD
+    A["PR altera prompt, modelo,<br/>dataset ou limiares"] --> B["GitHub Actions"]
+    B --> C{"Mudou algo<br/>do eval?"}
+    C -- não --> D["Check verde<br/>sem chamar a API"]
+    C -- sim --> E["Executor<br/>golden dataset × config"]
+    E --> F["LLM-como-juiz<br/>nota do resumo"]
+    F --> G["Comparador<br/>nova × baseline"]
+    G --> H{"Veredito"}
+    H -- OK --> I["Comentário no PR<br/>+ relatório HTML"]
+    H -- AVISO --> K["Comentário no PR<br/>+ alerta no Discord"]
+    H -- CRÍTICO --> J["Comentário + Discord<br/>+ merge bloqueado"]
+
+    classDef critico stroke:#EE562F,stroke-width:2px;
+    class J critico;

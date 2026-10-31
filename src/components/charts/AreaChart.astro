@@ -1,0 +1,99 @@
+---
+/**
+ * Área com curva suave (monotone) e gradiente vertical, desenhada no build.
+ * Os pontos ficam no centro de cada dia, alinhados com os rótulos do eixo X.
+ */
+import './chart.css';
+import { escalaY, escalaLinear, formatar, caminhoMonotone, r, type Formato } from './scale';
+
+interface Props {
+  titulo: string;
+  nomeSerie: string;
+  cor: string;
+  pontos: { dia: string; valor: number }[];
+  yFormat: Formato;
+  id: string; // para o id único do gradiente
+}
+const { titulo, nomeSerie, cor, pontos, yFormat, id } = Astro.props;
+
+const W = 600;
+const H = 200;
+const valores = pontos.map((p) => p.valor);
+const { max, ticks, passo } = escalaY(Math.max(...valores));
+const y = escalaLinear(max, H);
+const xCentro = (i: number) => ((i + 0.5) / pontos.length) * W;
+
+const coords: [number, number][] = pontos.map((p, i) => [xCentro(i), y(p.valor)]);
+const linha = caminhoMonotone(coords);
+// a área é a mesma curva, fechada descendo até a base
+const area = `${linha}L${r(coords[coords.length - 1][0])},${H}L${r(coords[0][0])},${H}Z`;
+
+const gradId = `grad-${id}`;
+const iPico = valores.indexOf(Math.max(...valores));
+const soma = valores.reduce((a, b) => a + b, 0);
+const ariaLabel = `${titulo}, de ${pontos[0].dia} a ${pontos[pontos.length - 1].dia}, em gráfico de área. Soma de ${formatar(soma, yFormat)}; pico em ${pontos[iPico].dia}, com ${formatar(valores[iPico], yFormat)}.`;
+---
+
+<div class="ch" data-chart>
+  <div class="ch-frame">
+    <div class="ch-y" aria-hidden="true">
+      {ticks.map((t) => <span style={`top:${r((y(t) / H) * 100)}%`}>{formatar(t, yFormat, { eixo: true, passo })}</span>)}
+    </div>
+    <div class="ch-plot" data-reveal="area">
+      <svg class="ch-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={ariaLabel}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color={cor} stop-opacity="0.38"></stop>
+            <stop offset="100%" stop-color={cor} stop-opacity="0"></stop>
+          </linearGradient>
+        </defs>
+        {
+          ticks.slice(1).map((t) => (
+            <line class="ch-grid-line" x1="0" x2={W} y1={r(y(t))} y2={r(y(t))} vector-effect="non-scaling-stroke" />
+          ))
+        }
+        <line class="ch-base-line" x1="0" x2={W} y1={H} y2={H} vector-effect="non-scaling-stroke" />
+        <g data-area>
+          <path d={area} fill={`url(#${gradId})`}></path>
+          <path d={linha} fill="none" stroke={cor} stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></path>
+        </g>
+      </svg>
+      <div aria-hidden="true" data-area-dots>
+        {
+          coords.map(([cx, cy], i) => (
+            <>
+              <span class="ch-cross" data-idx={i} style={`left:${r((cx / W) * 100)}%`} />
+              <span class="ch-dot" data-idx={i} style={`left:${r((cx / W) * 100)}%;top:${r((cy / H) * 100)}%;background:${cor}`} />
+            </>
+          ))
+        }
+      </div>
+      <div class="ch-hits">
+        {
+          pontos.map((p, i) => (
+            <button
+              type="button"
+              class="ch-hit"
+              style={`left:${r((i / pontos.length) * 100)}%;width:${r(100 / pontos.length)}%`}
+              aria-label={`${p.dia}: ${nomeSerie} ${formatar(p.valor, yFormat)}`}
+              data-tip={JSON.stringify({ dia: p.dia, linhas: [[nomeSerie, cor, formatar(p.valor, yFormat)]], total: null })}
+              data-centro={r(((i + 0.5) / pontos.length) * 100)}
+            />
+          ))
+        }
+      </div>
+      <div class="ch-tip" hidden aria-hidden="true"></div>
+    </div>
+    <div class="ch-x" aria-hidden="true">
+      {pontos.map((p, i) => <span style={`left:${r(((i + 0.5) / pontos.length) * 100)}%`}>{p.dia}</span>)}
+    </div>
+  </div>
+
+  <div class="sr-only"><table>
+    <caption>{titulo}</caption>
+    <thead><tr><th scope="col">Dia</th><th scope="col">{nomeSerie}</th></tr></thead>
+    <tbody>
+      {pontos.map((p) => <tr><th scope="row">{p.dia}</th><td>{formatar(p.valor, yFormat)}</td></tr>)}
+    </tbody>
+  </table></div>
+</div>

@@ -1,0 +1,63 @@
+---
+interface Kpi {
+  valor: string;
+  label: string;
+}
+interface Props {
+  itens: Kpi[];
+}
+const { itens } = Astro.props;
+---
+
+<dl class="kpis">
+  {
+    itens.map((k) => (
+      <div class="kpi">
+        <dt>{k.label}</dt>
+        <dd>{k.valor}</dd>
+      </div>
+    ))
+  }
+</dl>
+
+<style>
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    background: var(--border); /* o gap de 1px vira a linha divisória entre tiles */
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .kpis {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .kpi {
+    display: flex;
+    flex-direction: column-reverse; /* valor em cima, label embaixo; no DOM o dt vem antes (semântica do <dl>) */
+    justify-content: flex-end;
+    gap: 0.4rem;
+    padding: 1.1rem 1.2rem;
+    background: var(--surface);
+  }
+  dd {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 4vw, 2rem);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--text-strong);
+    font-variant-numeric: tabular-nums;
+  }
+  dt {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+</style>

@@ -1,0 +1,31 @@
+{
+  "theme": "base",
+  "fontFamily": "Inter, system-ui, sans-serif",
+  "themeVariables": {
+    "darkMode": true,
+    "background": "#202020",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "primaryColor": "#191919",
+    "primaryTextColor": "#F7DC9E",
+    "primaryBorderColor": "#3a3a3a",
+    "secondaryColor": "#262626",
+    "tertiaryColor": "#202020",
+    "lineColor": "#EE562F",
+    "textColor": "#F7DC9E",
+    "mainBkg": "#191919",
+    "nodeBorder": "#3a3a3a",
+    "clusterBkg": "#202020",
+    "edgeLabelBackground": "#202020"
+  },
+  "flowchart": {
+    "curve": "basis",
+    "padding": 16,
+    "nodeSpacing": 28,
+    "rankSpacing": 32,
+    "htmlLabels": true,
+    "useMaxWidth": true,
+    "wrappingWidth": 320
+  },
+  "themeCSS": ".node rect,.node polygon,.node path{filter:none !important;} .edgeLabel,.edgeLabel p{font-family:\"JetBrains Mono\",monospace;font-size:12px;color:#F7DC9E99;}"
+}

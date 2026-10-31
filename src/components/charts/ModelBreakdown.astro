@@ -1,0 +1,202 @@
+---
+/**
+ * Tabela por modelo no estilo da OpenRouter: Min, Max, Média, Soma e % do total,
+ * com uma barrinha de % na cor do modelo. No mobile, cada linha vira um card
+ * (a tabela continua sendo uma <table> para leitores de tela).
+ */
+import './chart.css';
+import { formatar, type Serie } from './scale';
+
+interface Linha {
+  modelo: string;
+  min: number;
+  max: number;
+  media: number;
+  soma: number;
+  pct: number;
+}
+interface Props {
+  linhas: Linha[];
+  modelos: (Serie & { nomeTabela: string })[];
+  caption: string;
+}
+const { linhas, modelos, caption } = Astro.props;
+const porId = new Map(modelos.map((m) => [m.id, m]));
+const ordenadas = [...linhas].sort((a, b) => b.soma - a.soma);
+// valores oficiais da tabela: mostramos com as casas que a OpenRouter mostra
+const usd = (v: number) => `$${+v.toPrecision(3)}`;
+---
+
+<table class="mb">
+  <caption class="sr-only">{caption}</caption>
+  <thead>
+    <tr>
+      <th scope="col">Modelo</th>
+      <th scope="col" class="n">Min</th>
+      <th scope="col" class="n">Max</th>
+      <th scope="col" class="n">Média</th>
+      <th scope="col" class="n">Soma</th>
+      <th scope="col" class="p">% do total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      ordenadas.map((l) => {
+        const m = porId.get(l.modelo)!;
+        return (
+          <tr>
+            <th scope="row" class="nome">
+              <span class="ch-sw" style={`--sw:${m.cor}`} aria-hidden="true" />
+              {m.nomeTabela}
+            </th>
+            <td class="n" data-label="Min">{usd(l.min)}</td>
+            <td class="n" data-label="Max">{usd(l.max)}</td>
+            <td class="n" data-label="Média">{usd(l.media)}</td>
+            <td class="n soma" data-label="Soma">{usd(l.soma)}</td>
+            <td class="p" data-label="% do total">
+              <span class="pwrap">
+                <span class="barra" aria-hidden="true">
+                  <span style={`width:${l.pct}%;background:${m.cor}`} />
+                </span>
+                <span class="pct">{l.pct.toFixed(1)}%</span>
+              </span>
+            </td>
+          </tr>
+        );
+      })
+    }
+  </tbody>
+</table>
+
+<style>
+  .mb {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    margin: 0;
+  }
+  .mb th,
+  .mb td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+    background: none;
+  }
+  .mb tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+  .mb thead th {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .nome {
+    /* neutraliza o estilo de <th> do .prose (mono, caixa alta) */
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+    color: var(--text-strong);
+    white-space: nowrap;
+  }
+  .nome .ch-sw {
+    margin-right: 0.5rem;
+  }
+  .n {
+    text-align: right !important;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--text);
+  }
+  .soma {
+    color: var(--text-strong);
+  }
+  .p {
+    width: 9.5rem;
+  }
+  .pwrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .barra {
+    flex: 1;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .barra span {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-full);
+  }
+  .pct {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-strong);
+    min-width: 3.2rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- mobile: cada linha vira um card ---------- */
+  @media (max-width: 640px) {
+    .mb thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+    .mb,
+    .mb tbody,
+    .mb tr,
+    .mb th,
+    .mb td {
+      display: block;
+    }
+    .mb tbody {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .mb tr {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.6rem 0.5rem;
+      padding: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .mb th,
+    .mb td {
+      padding: 0;
+      border: 0;
+    }
+    .nome {
+      grid-column: 1 / -1;
+    }
+    .n {
+      text-align: left !important;
+    }
+    .n::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 0.15rem;
+      color: var(--text-muted);
+    }
+    td.p {
+      grid-column: 1 / -1;
+      width: auto;
+    }
+  }
+</style>
