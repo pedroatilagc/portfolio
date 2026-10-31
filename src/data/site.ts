@@ -21,4 +21,5 @@ export const STACK = [
   'LangChain',
   'Playwright',
   'SQL',
+  'Pydantic',
 ];
