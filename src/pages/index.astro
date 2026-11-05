@@ -10,6 +10,8 @@ import { getGitHubData } from '../lib/github';
 import { LUCIDE, innerSvg } from '../lib/lucide';
 import { siGithub } from 'simple-icons';
 import linkedinRaw from '../assets/icons/linkedin.svg?raw';
+// Fonte só da tag do hero (peso 500, subset latin): carregada apenas na home.
+import '@fontsource/geist-mono/500.css';
 
 // Dados do GitHub buscados no build (token só no servidor). null = seção oculta.
 const github = await getGitHubData();
@@ -122,21 +124,34 @@ const projetos = (await getCollection('projetos')).sort(
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.6em;
+    gap: 0.75em;
     margin: 0;
-    /* Minimalista: sem pílula nem laranja, só tipografia em creme. */
-    color: var(--text-strong);
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
+    /* "Tag de código" estilo IDE: Geist Mono em caixa normal (como texto num editor),
+       cinza claro neutro, da mesma família de cinzas do fundo (#191919), só que perto
+       do branco. A caixa usa os próprios cinzas do site: --surface e --border. */
+    --tag-text: #d4d4d4; /* ~12:1 sobre --surface */
+    --tag-dim: #8a8a8a;
+    --tag-line: #3a3a3a;
+    padding: 0.55em 0.85em;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--tag-text);
+    font-family: 'Geist Mono', var(--font-mono);
+    font-weight: 500;
+    font-size: 0.8125rem;
     line-height: 1.2;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
   }
+  /* divisor vertical fino no lugar do "·" (o caractere segue no HTML, invisível) */
   .badge-sep {
-    color: var(--text-muted);
+    width: 1px;
+    height: 1.1em;
+    overflow: hidden;
+    color: transparent;
+    background: var(--tag-line);
   }
   .badge-pin {
-    color: var(--text-muted);
+    color: var(--tag-dim);
     width: 1em;
     height: 1em;
     fill: none;
