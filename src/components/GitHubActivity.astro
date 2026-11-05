@@ -1,0 +1,356 @@
+---
+/*
+  Seção "Atividade no GitHub". Recebe os dados já buscados no build (src/lib/github.ts).
+  Tudo aqui vira HTML/SVG estático; o único JS é o tooltip (src/scripts/github-heatmap.ts).
+*/
+import type { Activity, GitHubData } from '../lib/github';
+import { GITHUB_USER } from '../lib/github';
+import { LUCIDE, type LucideName } from '../lib/lucide';
+
+interface Props {
+  data: GitHubData;
+}
+const { data } = Astro.props;
+
+// ---------- geometria do heatmap ----------
+const CELL = 11;
+const GAP = 3;
+const STEP = CELL + GAP;
+const LEFT = 30; // coluna dos rótulos Seg/Qua/Sex
+const TOP = 18; // linha dos rótulos dos meses
+const weeks = data.weeks;
+const width = LEFT + weeks.length * STEP - GAP;
+const height = TOP + 7 * STEP - GAP;
+
+// Rótulo do mês na 1ª semana em que ele aparece (pula se ficar a < 3 colunas do anterior).
+const monthFmt = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' });
+const months: { x: number; label: string }[] = [];
+let prevMonth = -1;
+let prevCol = -10;
+weeks.forEach((week, col) => {
+  const first = week.find((d) => Number(d.date.slice(8, 10)) <= 7) ?? week[0];
+  const m = Number(first.date.slice(5, 7));
+  // Nas 2 últimas colunas o rótulo não cabe (sairia do SVG): fica sem.
+  if (m !== prevMonth && col <= weeks.length - 3) {
+    // Colado no anterior (caso típico: o mês parcial da 1ª coluna)? O mês novo vence.
+    if (col - prevCol < 3) months.pop();
+    months.push({ x: LEFT + col * STEP, label: monthFmt.format(new Date(first.date)).replace('.', '') });
+    prevCol = col;
+    prevMonth = m;
+  }
+});
+const dayLabels = [
+  { row: 1, label: 'Seg' },
+  { row: 3, label: 'Qua' },
+  { row: 5, label: 'Sex' },
+];
+const lastDate = weeks.at(-1)?.at(-1)?.date;
+
+// ---------- textos ----------
+const nf = new Intl.NumberFormat('pt-BR');
+const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });
+function relative(iso: string): string {
+  const diff = (new Date(iso).getTime() - Date.now()) / 1000;
+  const abs = Math.abs(diff);
+  if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
+  if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
+  if (abs < 86400 * 30) return rtf.format(Math.round(diff / 86400), 'day');
+  if (abs < 86400 * 365) return rtf.format(Math.round(diff / (86400 * 30)), 'month');
+  return rtf.format(Math.round(diff / (86400 * 365)), 'year');
+}
+const ICON: Record<Activity['kind'], LucideName> = {
+  push: 'gitCommit',
+  'pr-open': 'gitPullRequest',
+  'pr-merge': 'gitMerge',
+  repo: 'folderPlus',
+};
+const updated = new Intl.DateTimeFormat('pt-BR', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'America/Fortaleza',
+}).format(new Date(data.fetchedAt));
+const profile = `https://github.com/${GITHUB_USER}`;
+---
+
+<section id="github" class="container gh" aria-labelledby="gh-title">
+  <div class="card" data-gh-card>
+    <header class="head">
+      <h2 id="gh-title" class="eyebrow">Atividade no GitHub</h2>
+      <a class="profile" href={profile} target="_blank" rel="noopener noreferrer"
+        >@{GITHUB_USER} <span aria-hidden="true">→</span></a
+      >
+    </header>
+
+    <p class="total">
+      <strong>{nf.format(data.total)}</strong>{' '}{data.total === 1 ? 'contribuição' : 'contribuições'} no último ano
+    </p>
+
+    <div class="scroller" data-gh-scroller>
+      <svg
+        class="heatmap"
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="group"
+        aria-label={`Calendário de contribuições dos últimos 12 meses. Use as setas para navegar pelos dias.`}
+        data-reveal="cells"
+        data-gh-heatmap
+      >
+        <g class="labels" aria-hidden="true">
+          {months.map((m) => <text x={m.x} y={11}>{m.label}</text>)}
+          {dayLabels.map((d) => <text x={0} y={TOP + d.row * STEP + CELL - 2}>{d.label}</text>)}
+        </g>
+        {
+          weeks.map((week, col) => (
+            <g data-week={col}>
+              {week.map((d) => (
+                <rect
+                  x={LEFT + col * STEP}
+                  y={TOP + d.weekday * STEP}
+                  width={CELL}
+                  height={CELL}
+                  rx="2"
+                  class={`l${d.level}`}
+                  data-c={d.count}
+                  data-d={d.date}
+                  tabindex={d.date === lastDate ? '0' : undefined}
+                />
+              ))}
+            </g>
+          ))
+        }
+      </svg>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span>Menos</span>
+      <svg width={5 * STEP - GAP} height={CELL} viewBox={`0 0 ${5 * STEP - GAP} ${CELL}`}>
+        {[0, 1, 2, 3, 4].map((l) => <rect x={l * STEP} width={CELL} height={CELL} rx="2" class={`l${l}`} />)}
+      </svg>
+      <span>Mais</span>
+    </div>
+
+    <!-- Visual apenas: o leitor de tela recebe o mesmo texto como aria-label do quadrado focado. -->
+    <div class="tooltip" aria-hidden="true" data-gh-tooltip hidden></div>
+
+    {
+      data.activity.length > 0 && (
+        <div class="recent">
+          <h3 class="recent-title">Atividade recente</h3>
+          <ul>
+            {data.activity.map((a) => (
+              <li>
+                <svg class="act-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" set:html={LUCIDE[ICON[a.kind]]} />
+                <a href={a.url} target="_blank" rel="noopener noreferrer">
+                  {a.text}
+                </a>
+                <time datetime={a.date}>{relative(a.date)}</time>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+
+    <p class="updated">Atualizado em {updated}</p>
+  </div>
+</section>
+
+<style>
+  .gh {
+    padding-bottom: clamp(3rem, 8vw, 5rem);
+  }
+  .card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: clamp(1.25rem, 3vw, 1.75rem);
+    display: grid;
+    /* minmax(0, 1fr): sem isso a coluna cresce até a largura do SVG (min-width: auto)
+       e o card estoura a tela em vez de rolar. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  /* h2 com a cara de eyebrow (a classe global define fonte, caixa e cor). */
+  .head h2 {
+    font-weight: 400;
+  }
+  .profile {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 200ms var(--ease-out);
+  }
+  .profile:hover {
+    color: var(--accent-text);
+  }
+  .total {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text);
+  }
+  .total strong {
+    color: var(--text-strong);
+    font-weight: 600;
+  }
+
+  /* No mobile o heatmap não encolhe: o card rola na horizontal (o JS leva o scroll ao fim). */
+  .scroller {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    /* espaço para o anel de foco dos quadrados não ser cortado */
+    padding: 4px;
+    margin: -4px;
+  }
+  .heatmap {
+    display: block;
+    overflow: visible;
+    /* o reset global (svg { max-width: 100% }) encolheria os quadrados: aqui o tamanho é fixo
+       e quem se adapta é o scroll do card. */
+    max-width: none;
+  }
+  .labels text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--text-muted);
+  }
+  rect {
+    shape-rendering: geometricPrecision;
+  }
+  .l0 {
+    fill: var(--surface-2);
+  }
+  .l1,
+  .l2,
+  .l3,
+  .l4 {
+    fill: var(--accent);
+  }
+  .l1 {
+    fill-opacity: 0.25;
+  }
+  .l2 {
+    fill-opacity: 0.45;
+  }
+  .l3 {
+    fill-opacity: 0.7;
+  }
+  .heatmap rect:focus {
+    outline: none;
+  }
+  .heatmap rect:focus-visible,
+  .heatmap rect[data-active] {
+    stroke: var(--text-strong);
+    stroke-width: 1.5;
+  }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+  .legend svg {
+    display: block;
+  }
+
+  .tooltip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 2;
+    pointer-events: none;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1;
+    color: var(--text-strong);
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.45rem 0.6rem;
+    transform: translate(-50%, calc(-100% - 8px));
+  }
+
+  .recent {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .recent-title {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+  }
+  .recent ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem 2rem;
+  }
+  @media (min-width: 768px) {
+    .recent ul {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .recent li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: var(--text-sm);
+    min-width: 0;
+  }
+  .act-icon {
+    width: 1.1em;
+    height: 1.1em;
+    flex-shrink: 0;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .recent a {
+    color: var(--text-strong);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 200ms var(--ease-out);
+  }
+  .recent a:hover {
+    color: var(--accent-text);
+  }
+  .recent time {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+  .updated {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+</style>

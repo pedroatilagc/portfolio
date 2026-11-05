@@ -1,0 +1,88 @@
+---
+/*
+  Texto com efeito de decodificação (src/scripts/decode-text.ts).
+
+  O HTML do build tem o texto real e completo: é o que buscadores e quem está sem
+  JS recebem. O JS divide em spans (aria-hidden) e embaralha; o aria-label mantém
+  o nome legível para o leitor de tela durante e depois do efeito.
+*/
+import type { HTMLTag } from 'astro/types';
+
+interface Props {
+  text: string;
+  as?: HTMLTag;
+  id?: string;
+  class?: string;
+}
+const { text, as: Tag = 'span', id, class: className } = Astro.props;
+---
+
+<Tag id={id} class:list={['decode', className]} aria-label={text} data-decode>{text}</Tag>
+
+<style>
+  /* Até o JS começar a animação, o nome fica oculto (só com .motion-ok, ou seja,
+     com JS e sem reduced motion). Não é fade: ele aparece já embaralhado.
+     Failsafe: se o JS falhar, aparece sozinho em 6s. */
+  :global(.motion-ok) [data-decode]:not([data-decode-ready]) {
+    visibility: hidden;
+    animation: 0s 6s forwards decode-failsafe;
+  }
+  @keyframes decode-failsafe {
+    to {
+      visibility: visible;
+    }
+  }
+
+  /* Palavras inteiras não quebram: a quebra de linha só acontece nos espaços,
+     e não muda durante a animação. inline-block para poder receber transform (o "rasgo"). */
+  .decode :global(.dw) {
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: top;
+  }
+  /* Largura travada pelo JS (na letra final). vertical-align: top + line-height
+     herdado: todas as caixas têm a mesma altura, então trocar de fonte (Fraunces ↔
+     JetBrains Mono) não mexe na altura da linha. */
+  .decode :global(.dc) {
+    display: inline-block;
+    text-align: center;
+    overflow: visible;
+    vertical-align: top;
+  }
+
+  /* ---------- Corrupção ----------
+     Tudo aqui é transform / opacity / text-shadow: nada altera o layout.
+     As variáveis (--gx, --gy, --go, --rx) são sorteadas pelo JS a cada troca de símbolo. */
+  .decode :global(.dc.is-scrambling) {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0;
+    /* mesma cor do nome: o "erro" vem do glifo e das franjas, não de outra cor */
+    color: inherit;
+    opacity: var(--go, 1);
+    transform: translate(calc(var(--gx, 0) * 0.06em), calc(var(--gy, 0) * 0.05em));
+    /* separação RGB: duas cópias deslocadas para os lados, como um sinal fora de fase */
+    text-shadow:
+      calc(var(--rx, 1) * -0.05em) 0 0 color-mix(in oklab, var(--accent) 85%, transparent),
+      calc(var(--rx, 1) * 0.05em) 0 0 rgba(120, 210, 230, 0.55);
+  }
+  /* rasgo: a palavra inteira escorrega e inclina por um instante */
+  .decode :global(.dw.is-torn) {
+    transform: translateX(calc(var(--tx, 0) * 0.07em)) skewX(calc(var(--tx, 0) * -12deg));
+  }
+  /* ao travar: um flash que "assenta" a letra real */
+  .decode :global(.dc.is-locked) {
+    animation: decode-lock 280ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  @keyframes decode-lock {
+    from {
+      text-shadow:
+        -0.04em 0 0 color-mix(in oklab, var(--accent) 80%, transparent),
+        0.04em 0 0 rgba(120, 210, 230, 0.45),
+        0 0 0.4em color-mix(in oklab, var(--text-strong) 55%, transparent);
+    }
+    to {
+      text-shadow: none;
+    }
+  }
+</style>

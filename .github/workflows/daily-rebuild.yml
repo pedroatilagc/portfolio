@@ -1,0 +1,39 @@
+# Rebuild diário do site na Vercel.
+#
+# O site é estático: os dados do GitHub (heatmap e atividade) são buscados só no build.
+# Para eles não envelhecerem, este workflow chama o Deploy Hook da Vercel uma vez por dia,
+# o que dispara um build novo da branch de produção.
+#
+# Secret necessário (GitHub → Settings → Secrets and variables → Actions):
+#   VERCEL_DEPLOY_HOOK = URL do Deploy Hook (Vercel → Settings → Git → Deploy Hooks)
+#
+# Observação: o GitHub desativa workflows agendados em repositórios sem atividade
+# por 60 dias. Se isso acontecer, reative em Actions → este workflow → "Enable workflow".
+name: Rebuild diário
+
+on:
+  schedule:
+    # Cron em UTC: 09:00 UTC = 06:00 em Brasília/Fortaleza (UTC-3).
+    - cron: '0 9 * * *'
+  # Botão "Run workflow" na aba Actions, para disparar à mão.
+  workflow_dispatch:
+
+# O job só faz uma requisição HTTP: não precisa de nenhuma permissão no repositório.
+permissions: {}
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Disparar o Deploy Hook da Vercel
+        env:
+          DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::Secret VERCEL_DEPLOY_HOOK não configurado."
+            exit 1
+          fi
+          # -f: falha em HTTP >= 400. A URL não é impressa (o GitHub também mascara secrets).
+          curl -fsS -X POST "$DEPLOY_HOOK" -o /dev/null
+          echo "Deploy Hook disparado."

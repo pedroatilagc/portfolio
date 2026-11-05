@@ -1,21 +1,41 @@
 ---
-import { STACK } from '../data/site';
+import { STACK } from '../data/stack';
+
+/*
+  As duas cópias saem do MESMO array. A segunda existe só para o loop visual:
+  fica fora da árvore de acessibilidade (aria-hidden no <ul>) e fora do Tab
+  (tabindex="-1" em cada item).
+*/
+const copies = [{ duplicate: false }, { duplicate: true }];
 ---
 
 <section class="marquee" data-marquee aria-label="Tecnologias que uso">
   <div class="container head">
     <span class="eyebrow">Stack</span>
-    <button type="button" class="toggle" data-marquee-toggle aria-pressed="false">Pausar faixa</button>
   </div>
   <div class="viewport">
     <!-- O conteúdo é duplicado: a faixa anda até -50% (exatamente uma cópia) e recomeça sem emenda visível. -->
     <div class="track">
-      <ul class="group">
-        {STACK.map((s) => <li>{s}</li>)}
-      </ul>
-      <ul class="group" aria-hidden="true">
-        {STACK.map((s) => <li>{s}</li>)}
-      </ul>
+      {
+        copies.map(({ duplicate }) => (
+          <ul class="group" aria-hidden={duplicate ? 'true' : undefined}>
+            {STACK.map((item) => (
+              <li>
+                <span class="item" style={`--brand: ${item.brandHex}`} tabindex={duplicate ? '-1' : '0'}>
+                  <svg
+                    class:list={['icon', `icon--${item.icon.paint}`]}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                    set:html={item.icon.body}
+                  />
+                  {item.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ))
+      }
     </div>
   </div>
 </section>
@@ -23,34 +43,19 @@ import { STACK } from '../data/site';
 <style>
   .marquee {
     border-block: 1px solid var(--border);
-    padding-block: 1.25rem 1.5rem;
+    padding-block: 0.875rem 1.125rem;
   }
   .head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
-  }
-  .toggle {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--text-muted);
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    padding: 0.45rem 0.9rem;
-    min-height: 2.25rem;
-    cursor: pointer;
-    transition:
-      color var(--dur-fast) ease,
-      border-color var(--dur-fast) ease;
-  }
-  .toggle:hover {
-    color: var(--text-strong);
-    border-color: var(--accent);
+    margin-bottom: 0.625rem;
   }
   .viewport {
-    overflow: hidden;
+    /* clip (não hidden): o foco via Tab não consegue rolar a viewport e
+       desalinhar a animação. A margem deixa o anel de foco aparecer. */
+    overflow: clip;
+    overflow-clip-margin: 6px;
     mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   }
   .track {
@@ -68,15 +73,17 @@ import { STACK } from '../data/site';
   .group li {
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    font-size: clamp(1.25rem, 3.2vw, 1.75rem);
+    line-height: 1.2;
     letter-spacing: -0.02em;
     color: var(--text-strong);
     white-space: nowrap;
-    padding-inline: 1.25rem;
+    padding-inline: 1rem;
     display: flex;
     align-items: center;
-    gap: 2.5rem;
+    gap: 2rem;
   }
+  /* O separador fica no <li>, fora do .item, para não entrar no anel de foco. */
   .group li::after {
     content: '';
     width: 6px;
@@ -84,7 +91,62 @@ import { STACK } from '../data/site';
     border-radius: 50%;
     background: var(--accent);
   }
-  .marquee[data-paused] .track {
+  .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    color: var(--text-strong);
+    transition: color 200ms var(--ease-out);
+  }
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    transition:
+      fill 200ms var(--ease-out),
+      stroke 200ms var(--ease-out);
+  }
+  /* Padrão monocromático: o ícone herda a cor do texto via currentColor. */
+  .icon--fill {
+    fill: currentColor;
+  }
+  .icon--stroke {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Hover e foco: texto puxa para o laranja, ícone assume a cor da marca. */
+  .item:focus-visible {
+    color: color-mix(in oklab, var(--text-strong) 60%, var(--accent));
+  }
+  .item:focus-visible .icon--fill {
+    fill: var(--brand);
+  }
+  .item:focus-visible .icon--stroke {
+    stroke: var(--brand);
+  }
+  /* Só em dispositivos com hover real: no touch o toque não deixa estado preso. */
+  @media (hover: hover) {
+    .item:hover {
+      color: color-mix(in oklab, var(--text-strong) 60%, var(--accent));
+    }
+    .item:hover .icon--fill {
+      fill: var(--brand);
+    }
+    .item:hover .icon--stroke {
+      stroke: var(--brand);
+    }
+    /* Pausa enquanto o mouse está na faixa, para dar para mirar num item. */
+    .viewport:hover .track {
+      animation-play-state: paused;
+    }
+  }
+
+  /* Foco por teclado também para a faixa (o item focado não foge). */
+  .viewport:focus-within .track {
     animation-play-state: paused;
   }
   @keyframes marquee {
@@ -108,8 +170,7 @@ import { STACK } from '../data/site';
       flex-wrap: wrap;
       row-gap: 0.5rem;
     }
-    .group[aria-hidden='true'],
-    .toggle {
+    .group[aria-hidden='true'] {
       display: none;
     }
   }

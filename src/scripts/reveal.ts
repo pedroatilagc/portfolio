@@ -9,16 +9,20 @@ import { anim, splitWords, prefersReducedMotion, EASE } from './anim';
  * - Sem JS ou com reduced motion: nada é escondido.
  */
 
-type Variant = 'fade' | 'words' | 'line' | 'clip' | 'bars' | 'area';
+type Variant = 'fade' | 'words' | 'line' | 'clip' | 'bars' | 'area' | 'cells';
 type Pending = {
   el: HTMLElement;
   variant: Variant;
   words?: HTMLElement[];
-  parts?: HTMLElement[]; // colunas (bars) ou o grupo da área (area)
+  parts?: HTMLElement[]; // colunas (bars), grupo da área (area) ou semanas do heatmap (cells)
   finishers: (() => void)[];
 };
 
-const VARIANTS: Variant[] = ['words', 'line', 'clip', 'bars', 'area'];
+const VARIANTS: Variant[] = ['words', 'line', 'clip', 'bars', 'area', 'cells'];
+
+// Heatmap: fade por coluna (semana), da esquerda para a direita, ~600ms no total.
+const CELLS_TOTAL = 600;
+const CELLS_FADE = 300;
 
 const CLIP_HIDDEN = 'inset(100% 0 0 0 round 16px)';
 const CLIP_SHOWN = 'inset(0% 0 0 0 round 16px)';
@@ -52,6 +56,10 @@ function hide(p: Pending) {
         g.style.opacity = '0';
         g.style.clipPath = 'inset(0 100% 0 0)';
       });
+      break;
+    case 'cells':
+      p.parts = [...p.el.querySelectorAll<HTMLElement>('[data-week]')];
+      p.parts.forEach((g) => (g.style.opacity = '0'));
       break;
   }
 }
@@ -133,6 +141,21 @@ function show(p: Pending, instant = false) {
         ),
       );
       break;
+    case 'cells': {
+      const n = p.parts?.length ?? 1;
+      const step = n > 1 ? (CELLS_TOTAL - CELLS_FADE) / (n - 1) : 0;
+      p.parts?.forEach((g, i) =>
+        push(
+          anim(g, [{ opacity: 0 }, { opacity: 1 }], {
+            duration: duration(CELLS_FADE),
+            delay: instant ? 0 : delay + i * step,
+            easing: EASE.out,
+            reset: true,
+          }),
+        ),
+      );
+      break;
+    }
   }
 }
 

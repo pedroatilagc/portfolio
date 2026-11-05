@@ -3,6 +3,8 @@ import { initHero } from './hero';
 import { initReveal } from './reveal';
 import { initHeader, initCopyButtons, initToc, initMarquee, initTerminals } from './ui';
 import { initCharts } from './charts';
+import { initDecodeText } from './decode-text';
+import { initGitHubHeatmap } from './github-heatmap';
 
 /**
  * Ponto de entrada de todo o JS do site.
@@ -24,6 +26,8 @@ function init() {
 
   cleanups.push(
     initHero(introRunning),
+    initDecodeText(introRunning),
+    initGitHubHeatmap(),
     initReveal(),
     initHeader(),
     initToc(),

@@ -1,6 +1,6 @@
 import { anim, splitWords, prefersReducedMotion, EASE } from './anim';
 
-const STEP = 130; // ms entre cada item da cascata (eyebrow → H1 → parágrafo → CTAs)
+const STEP = 120; // ms entre cada item da cascata (badge → parágrafo → ícones → botões)
 // Com intro: começa 550ms após o INÍCIO do wipe (o wipe dura 500ms; o eyebrow já
 // entra no fim dele e a cascata continua, então a revelação parece um movimento só).
 const AFTER_WIPE = 550;
