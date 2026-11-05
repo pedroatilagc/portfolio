@@ -1,0 +1,265 @@
+---
+/*
+  Home, compartilhada pelos dois idiomas (src/pages/index.astro e src/pages/en/index.astro).
+  O idioma vem da URL (Astro.currentLocale); os textos, do dicionário em src/i18n.
+*/
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import StackMarquee from '../components/StackMarquee.astro';
+import DecodeText from '../components/DecodeText.astro';
+import GitHubActivity from '../components/GitHubActivity.astro';
+import { SITE } from '../data/site';
+import { getGitHubData } from '../lib/github';
+import { LUCIDE, innerSvg } from '../lib/lucide';
+import { siGithub } from 'simple-icons';
+import { getLang, ui, langOf } from '../i18n';
+import linkedinRaw from '../assets/icons/linkedin.svg?raw';
+// Fonte só da tag do hero (peso 500, subset latin): carregada apenas na home.
+import '@fontsource/geist-mono/500.css';
+
+// Dados do GitHub buscados no build (token só no servidor). null = seção oculta.
+const github = await getGitHubData();
+
+const lang = getLang(Astro.currentLocale);
+const t = ui[lang];
+const NOME = 'Pedro Átila Gomes Câmara';
+
+const social = [
+  { label: 'GitHub', href: SITE.github, icon: `<path d="${siGithub.path}"/>`, paint: 'fill', external: true },
+  { label: 'LinkedIn', href: SITE.linkedin, icon: innerSvg(linkedinRaw), paint: 'fill', external: true },
+  { label: t.hero.email, href: 'mailto:pedroatilagc@gmail.com', icon: LUCIDE.mail, paint: 'stroke', external: false },
+].filter((s) => s.href);
+
+// Só os projetos do idioma da página (src/content/projetos/<idioma>/).
+const projetos = (await getCollection('projetos', (p) => langOf(p.id) === lang)).sort(
+  (a, b) =>
+    (a.data.ordem ?? Infinity) - (b.data.ordem ?? Infinity) ||
+    b.data.data.getTime() - a.data.data.getTime(),
+);
+---
+
+<Base>
+  <section class="hero container" aria-labelledby="hero-title">
+    <!-- O nome entra com o decode (não usa data-hero-hidden). O HTML do build já tem o nome real. -->
+    <DecodeText as="h1" id="hero-title" text={NOME} />
+    <p class="badge" data-hero-hidden>
+      {t.hero.role}<span class="badge-sep" aria-hidden="true">·</span><svg
+        class="badge-pin"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+        set:html={LUCIDE.mapPin}
+      />{t.hero.location}
+    </p>
+    <p class="lede" data-hero-hidden>{t.hero.lede}</p>
+    <ul class="social" data-hero-hidden>
+      {
+        social.map((s) => (
+          <li>
+            <a
+              href={s.href}
+              aria-label={s.label}
+              {...(s.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
+              <svg class:list={['social-icon', `social-icon--${s.paint}`]} viewBox="0 0 24 24" aria-hidden="true" focusable="false" set:html={s.icon} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    <div class="ctas" data-hero-hidden>
+      <a class="btn btn-primary" href="#projetos">{t.hero.ctaProjects} <span class="arrow arrow-y" aria-hidden="true">↓</span></a>
+      <a class="btn btn-secondary" href="#sobre">{t.hero.ctaAbout} <span class="arrow arrow-y" aria-hidden="true">↓</span></a>
+    </div>
+  </section>
+
+  {github && <GitHubActivity data={github} />}
+
+  <StackMarquee />
+
+  <section id="projetos" class="section container" aria-labelledby="projetos-title">
+    <div class="section-head">
+      <span class="eyebrow" data-reveal>{t.sections.projectsEyebrow}</span>
+      <h2 id="projetos-title" data-reveal="words">{t.sections.projectsTitle}</h2>
+      <hr class="divider" data-reveal="line" />
+    </div>
+    <div class="grid">
+      {projetos.map((p, i) => <ProjectCard projeto={p} delay={i % 2} />)}
+    </div>
+  </section>
+
+  <section id="sobre" class="section container sobre" aria-labelledby="sobre-title">
+    <div class="section-head">
+      <span class="eyebrow" data-reveal>{t.sections.aboutEyebrow}</span>
+      <h2 id="sobre-title" data-reveal="words">{t.sections.aboutTitle}</h2>
+      <hr class="divider" data-reveal="line" />
+    </div>
+    <div class="sobre-body" data-reveal>
+      {
+        lang === 'en' ? (
+          <>
+            <p>
+              I study Computer Science at <strong>UNIFOR</strong>, in Fortaleza, Brazil, with a strong interest in
+              Artificial Intelligence, Software Engineering and MLOps, steering my education toward building intelligent,
+              scalable solutions applied to real problems.
+            </p>
+            <p>
+              I focus on LLM applications, agents and RAG. I work to take language models from prototype to production,
+              with continuous evaluation, cost and latency control, and decisions driven by data, not intuition. I built{' '}
+              <strong>Senderix</strong>, a WhatsApp automation SaaS with AI applied to customer service, and the eval
+              system that guarantees the quality of its models, with a golden dataset, LLM-as-a-judge and regression
+              detection in CI. Today I focus on building agents, RAG pipelines and AI solutions that actually work in
+              the real world.
+            </p>
+          </>
+        ) : (
+          <>
+      <p>
+        Estudo Ciência da Computação na <strong>UNIFOR</strong>, em Fortaleza, com forte interesse em Inteligência
+        Artificial, Engenharia de Software e MLOps, direcionando minha formação para a construção de soluções
+        inteligentes, escaláveis e aplicadas a problemas reais.
+      </p>
+      <p>
+        Sou focado em aplicações com LLM, agentes e RAG. Trabalho para levar modelos de linguagem do protótipo à
+        produção, com avaliação contínua, controle de custo e latência e decisões baseadas em dados, não em intuição.
+        Criei o <strong>Senderix</strong>, um SaaS de automação de WhatsApp com IA aplicada ao atendimento, e o sistema
+        de evals que garante a qualidade dos seus modelos, com golden dataset, LLM-como-juiz e detecção de regressões
+        no CI. Hoje me dedico a construir agentes, pipelines de RAG e soluções com IA que funcionem de verdade no mundo
+        real.
+      </p>
+          </>
+        )
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    display: grid;
+    gap: 1.25rem;
+    justify-items: start;
+    padding-block: clamp(4rem, 12vw, 8rem) clamp(2.5rem, 6vw, 4rem);
+  }
+  .hero h1 {
+    /* Nome longo (24 caracteres): no máximo 2 linhas no desktop e 3 em 375px.
+       O decode trava a quebra entre palavras (ver DecodeText.astro). */
+    font-size: clamp(2.5rem, 7.2vw, 4.75rem);
+    line-height: 1.05;
+    margin-bottom: 0.25rem;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75em;
+    margin: 0;
+    /* "Tag de código" estilo IDE: Geist Mono em caixa normal (como texto num editor),
+       cinza claro neutro, da mesma família de cinzas do fundo (#191919), só que perto
+       do branco. A caixa usa os próprios cinzas do site: --surface e --border. */
+    --tag-text: #d4d4d4; /* ~12:1 sobre --surface */
+    --tag-dim: #8a8a8a;
+    --tag-line: #3a3a3a;
+    padding: 0.55em 0.85em;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--tag-text);
+    font-family: 'Geist Mono', var(--font-mono);
+    font-weight: 500;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+  }
+  /* divisor vertical fino no lugar do "·" (o caractere segue no HTML, invisível) */
+  .badge-sep {
+    width: 1px;
+    height: 1.1em;
+    overflow: hidden;
+    color: transparent;
+    background: var(--tag-line);
+  }
+  .badge-pin {
+    color: var(--tag-dim);
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+  .lede {
+    max-width: 38rem;
+    margin: 0;
+    font-size: clamp(1.05rem, 2vw, 1.2rem);
+    line-height: 1.65;
+  }
+  .social {
+    display: flex;
+    gap: 0.25rem;
+    list-style: none;
+    padding: 0;
+    /* a área de toque (44px) é maior que o ícone (22px): puxa para alinhar o ícone ao texto */
+    margin: -0.25rem 0 -0.25rem -11px;
+  }
+  .social a {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    color: var(--text-muted);
+    transition: color 200ms var(--ease-out);
+  }
+  .social a:hover {
+    color: var(--accent);
+  }
+  .social-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .social-icon--fill {
+    fill: currentColor;
+  }
+  .social-icon--stroke {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  /* Âncoras do hero: o header sticky (4rem) não cobre o título da seção. */
+  #projetos,
+  #sobre {
+    scroll-margin-top: 5rem;
+  }
+  .grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .sobre-body {
+    display: grid;
+    gap: 1.1rem;
+    max-width: 40rem;
+    font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+  .sobre-body strong {
+    color: var(--text-strong);
+    font-weight: 600;
+  }
+</style>

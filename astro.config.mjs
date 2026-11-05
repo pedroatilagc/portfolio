@@ -8,6 +8,13 @@ export default defineConfig({
   // É usada para gerar URLs absolutas (canonical e og:image).
   site: 'https://pedro.senderix.com.br',
   integrations: [mdx()],
+  // Dois idiomas. Português é o padrão e fica sem prefixo (/), inglês fica em /en/.
+  // Com isso o Astro preenche Astro.currentLocale ('pt' ou 'en') em cada página.
+  i18n: {
+    locales: ['pt', 'en'],
+    defaultLocale: 'pt',
+    routing: { prefixDefaultLocale: false },
+  },
   // Sem `output`/adapter: o padrão é estático (SSG). Tudo vira HTML no `npm run build`.
   markdown: {
     shikiConfig: {

@@ -8,6 +8,7 @@
  * Como no SVG o y cresce para baixo, y(v) = H − (v / max) · H.
  */
 import './chart.css';
+import { getLang, ui } from '../../i18n';
 import { escalaY, escalaLinear, formatar, r, type Dia, type Formato, type Serie } from './scale';
 
 interface Props {
@@ -20,6 +21,7 @@ interface Props {
   resumo?: string; // frase extra para o aria-label
 }
 const { titulo, series, days, yFormat, rotulosTopo, resumo } = Astro.props;
+const t = ui[getLang(Astro.currentLocale)].charts;
 
 const W = 600; // largura do viewBox (esticada pelo CSS)
 const H = 200; // altura do viewBox ≈ altura real em px
@@ -74,7 +76,7 @@ const colunas = days.map((d, i) => {
 
 const iPico = totais.indexOf(maiorTotal);
 const somaGeral = totais.reduce((a, b) => a + b, 0);
-const ariaLabel = `${titulo}, de ${days[0].dia} a ${days[days.length - 1].dia}, em barras empilhadas por dia. Total de ${formatar(somaGeral, yFormat)}; pico em ${days[iPico].dia}, com ${formatar(maiorTotal, yFormat)}.${resumo ? ' ' + resumo : ''}`;
+const ariaLabel = `${t.barsAria(titulo, days[0].dia, days[days.length - 1].dia, formatar(somaGeral, yFormat), days[iPico].dia, formatar(maiorTotal, yFormat))}${resumo ? ' ' + resumo : ''}`;
 ---
 
 <div class="ch" data-chart>
@@ -140,7 +142,7 @@ const ariaLabel = `${titulo}, de ${days[0].dia} a ${days[days.length - 1].dia}, 
     <caption>{titulo}</caption>
     <thead>
       <tr>
-        <th scope="col">Dia</th>
+        <th scope="col">{t.day}</th>
         {series.map((s) => <th scope="col">{s.nome}</th>)}
         <th scope="col">Total</th>
       </tr>

@@ -31,7 +31,8 @@ export type ActivityKind = 'push' | 'pr-open' | 'pr-merge' | 'repo';
 
 export interface Activity {
   kind: ActivityKind;
-  text: string;
+  /** Nome curto do repositório (sem o dono, se for do próprio usuário). A frase é montada no idioma da página. */
+  repo: string;
   url: string;
   date: string; // ISO
 }
@@ -103,6 +104,13 @@ async function fetchCalendar(token: string) {
 
 const shortRepo = (full: string) => full.replace(`${GITHUB_USER}/`, '');
 
+/** Nome do repositório de uma atividade. Snapshots antigos não têm `repo`: deriva da URL. */
+export function activityRepo(a: Activity): string {
+  if (a.repo) return a.repo;
+  const full = a.url.replace('https://github.com/', '').split('/').slice(0, 2).join('/');
+  return shortRepo(full);
+}
+
 /** Converte um evento da API num item de atividade (ou null, se não for push/PR/repo). */
 function toActivity(e: any): Activity | null {
   const repo: string = e.repo?.name ?? '';
@@ -110,18 +118,18 @@ function toActivity(e: any): Activity | null {
   const name = shortRepo(repo);
   switch (e.type) {
     case 'PushEvent':
-      return { kind: 'push', text: `Push em ${name}`, url: repoUrl, date: e.created_at };
+      return { kind: 'push', repo: name, url: repoUrl, date: e.created_at };
     case 'PullRequestEvent': {
       const pr = e.payload?.pull_request;
       const url = pr?.html_url ?? `${repoUrl}/pulls`;
       const merged = e.payload?.action === 'merged' || (e.payload?.action === 'closed' && pr?.merged);
-      if (merged) return { kind: 'pr-merge', text: `PR mesclado em ${name}`, url, date: e.created_at };
-      if (e.payload?.action === 'opened') return { kind: 'pr-open', text: `PR aberto em ${name}`, url, date: e.created_at };
+      if (merged) return { kind: 'pr-merge', repo: name, url, date: e.created_at };
+      if (e.payload?.action === 'opened') return { kind: 'pr-open', repo: name, url, date: e.created_at };
       return null;
     }
     case 'CreateEvent':
       return e.payload?.ref_type === 'repository'
-        ? { kind: 'repo', text: `Criou o repositório ${name}`, url: repoUrl, date: e.created_at }
+        ? { kind: 'repo', repo: name, url: repoUrl, date: e.created_at }
         : null;
     default:
       return null;
@@ -142,8 +150,10 @@ async function fetchActivity(token: string): Promise<Activity[]> {
   const out: Activity[] = [];
   for (const e of events) {
     const a = toActivity(e);
-    if (!a || seen.has(a.text)) continue;
-    seen.add(a.text);
+    if (!a) continue;
+    const key = `${a.kind}:${a.repo}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push(a);
     if (out.length === 4) break;
   }

@@ -1,5 +1,8 @@
 ---
 import type { MarkdownHeading } from 'astro';
+import { getLang, ui } from '../i18n';
+
+const label = ui[getLang(Astro.currentLocale)].toc;
 
 interface Props {
   headings: MarkdownHeading[];
@@ -11,7 +14,7 @@ const items = Astro.props.headings.filter((h) => h.depth === 2 || h.depth === 3)
   items.length > 0 && (
     <>
       <details class="toc-mobile" data-toc data-toc-mobile>
-        <summary>Nesta página</summary>
+        <summary>{label}</summary>
         <ol>
           {items.map((h) => (
             <li class={`d${h.depth}`}>
@@ -21,8 +24,8 @@ const items = Astro.props.headings.filter((h) => h.depth === 2 || h.depth === 3)
         </ol>
       </details>
 
-      <nav class="toc-desktop" data-toc aria-label="Nesta página">
-        <p class="eyebrow">Nesta página</p>
+      <nav class="toc-desktop" data-toc aria-label={label}>
+        <p class="eyebrow">{label}</p>
         <ol>
           {items.map((h) => (
             <li class={`d${h.depth}`}>

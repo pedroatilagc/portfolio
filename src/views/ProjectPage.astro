@@ -1,0 +1,123 @@
+---
+/*
+  Página de um projeto, compartilhada pelos dois idiomas:
+  src/pages/projetos/[slug].astro (pt) e src/pages/en/projects/[slug].astro (en).
+*/
+import { render, type CollectionEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Toc from '../components/Toc.astro';
+import Table from '../components/Table.astro';
+import { formatarData } from '../utils/format';
+import { getLang, ui, sectionUrl } from '../i18n';
+import '../styles/prose.css';
+
+interface Props {
+  projeto: CollectionEntry<'projetos'>;
+}
+const { projeto } = Astro.props;
+const { titulo, resumo, area, stack, repo, data, status, tempoDedicado } = projeto.data;
+// render() compila o MDX e devolve o componente <Content /> e a lista de headings (para a TOC)
+const { Content, headings } = await render(projeto);
+const repoLabel = repo.replace(/^https?:\/\/(www\.)?/, '');
+const lang = getLang(Astro.currentLocale);
+const t = ui[lang].project;
+---
+
+<Base title={titulo} description={resumo} ogType="article">
+  <article class="container projeto">
+    <header class="head">
+      <a class="back" href={sectionUrl(lang, 'projetos')}><span aria-hidden="true">←</span> {t.back}</a>
+      <span class="eyebrow" data-hero-hidden>{area}</span>
+      <h1 data-hero-hidden data-hero="words"><span data-words>{titulo}</span></h1>
+      <p class="resumo" data-hero-hidden>{resumo}</p>
+      <div class="meta-wrap" data-hero-hidden>
+        <ul class="pills" aria-label="Stack">
+          {stack.map((s) => <li class="pill">{s}</li>)}
+        </ul>
+        <dl class="meta">
+          <div><dt>{t.date}</dt><dd><time datetime={data.toISOString().slice(0, 10)}>{formatarData(data, lang)}</time></dd></div>
+          <div><dt>{t.status}</dt><dd>{t.statusValue[status] ?? status}</dd></div>
+          {tempoDedicado && <div><dt>{t.time}</dt><dd>{tempoDedicado}</dd></div>}
+          <div><dt>{t.repo}</dt><dd><a href={repo} target="_blank" rel="noopener">{repoLabel} ↗</a></dd></div>
+        </dl>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="toc-col">
+        <Toc headings={headings} />
+      </aside>
+      <div class="prose">
+        <Content components={{ table: Table }} />
+      </div>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .projeto {
+    padding-block: clamp(2.5rem, 7vw, 4.5rem) clamp(4rem, 10vw, 7rem);
+  }
+  .head {
+    display: grid;
+    gap: 1.25rem;
+    justify-items: start;
+    padding-bottom: clamp(2.5rem, 6vw, 3.5rem);
+    margin-bottom: clamp(2.5rem, 6vw, 3.5rem);
+    border-bottom: 1px solid var(--border);
+  }
+  .back {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-decoration: none;
+    margin-bottom: 0.75rem;
+  }
+  .back:hover {
+    color: var(--accent);
+  }
+  .head h1 {
+    max-width: 18ch;
+  }
+  .resumo {
+    max-width: 42rem;
+    font-size: clamp(1.05rem, 2vw, 1.2rem);
+    line-height: 1.65;
+  }
+  .meta-wrap {
+    display: grid;
+    gap: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+  .meta dt {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.25rem;
+  }
+  .meta dd {
+    margin: 0;
+    color: var(--text-strong);
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 1024px) {
+    .layout {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: 3.5rem;
+    }
+  }
+  .prose {
+    max-width: 44rem;
+  }
+</style>

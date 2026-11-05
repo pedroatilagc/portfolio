@@ -1,13 +1,17 @@
 ---
 import { SITE } from '../data/site';
+import { getLang, ui, homeUrl, sectionUrl } from '../i18n';
+
+const lang = getLang(Astro.currentLocale);
+const t = ui[lang];
 ---
 
 <footer class="site-footer">
   <div class="container inner">
-    <a class="wordmark" href="/">Pedro Câmara</a>
+    <a class="wordmark" href={homeUrl(lang)}>Pedro Câmara</a>
     <ul>
-      <li><a href="/#projetos">Projetos</a></li>
-      <li><a href="/#sobre">Sobre</a></li>
+      <li><a href={sectionUrl(lang, 'projetos')}>{t.nav.projects}</a></li>
+      <li><a href={sectionUrl(lang, 'sobre')}>{t.nav.about}</a></li>
       <li><a href={SITE.github} target="_blank" rel="noopener">GitHub</a></li>
       {SITE.linkedin && <li><a href={SITE.linkedin} target="_blank" rel="noopener">LinkedIn</a></li>}
     </ul>

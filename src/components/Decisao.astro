@@ -3,10 +3,12 @@ interface Props {
   titulo: string;
 }
 const { titulo } = Astro.props;
+import { getLang, ui } from '../i18n';
+const t = ui[getLang(Astro.currentLocale)];
 ---
 
-<aside class="decisao" aria-label={`Decisão técnica: ${titulo}`}>
-  <p class="label">Decisão</p>
+<aside class="decisao" aria-label={`${t.decisionAria}: ${titulo}`}>
+  <p class="label">{t.decision}</p>
   <p class="titulo">{titulo}</p>
   <div class="corpo"><slot /></div>
 </aside>

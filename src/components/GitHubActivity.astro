@@ -4,13 +4,17 @@
   Tudo aqui vira HTML/SVG estático; o único JS é o tooltip (src/scripts/github-heatmap.ts).
 */
 import type { Activity, GitHubData } from '../lib/github';
-import { GITHUB_USER } from '../lib/github';
+import { GITHUB_USER, activityRepo } from '../lib/github';
+import { getLang, ui, INTL_LOCALE } from '../i18n';
 import { LUCIDE, type LucideName } from '../lib/lucide';
 
 interface Props {
   data: GitHubData;
 }
 const { data } = Astro.props;
+const lang = getLang(Astro.currentLocale);
+const t = ui[lang].github;
+const locale = INTL_LOCALE[lang];
 
 // ---------- geometria do heatmap ----------
 const CELL = 11;
@@ -23,7 +27,7 @@ const width = LEFT + weeks.length * STEP - GAP;
 const height = TOP + 7 * STEP - GAP;
 
 // Rótulo do mês na 1ª semana em que ele aparece (pula se ficar a < 3 colunas do anterior).
-const monthFmt = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' });
+const monthFmt = new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' });
 const months: { x: number; label: string }[] = [];
 let prevMonth = -1;
 let prevCol = -10;
@@ -39,16 +43,12 @@ weeks.forEach((week, col) => {
     prevMonth = m;
   }
 });
-const dayLabels = [
-  { row: 1, label: 'Seg' },
-  { row: 3, label: 'Qua' },
-  { row: 5, label: 'Sex' },
-];
+const dayLabels = [1, 3, 5].map((row, i) => ({ row, label: t.days[i] }));
 const lastDate = weeks.at(-1)?.at(-1)?.date;
 
 // ---------- textos ----------
-const nf = new Intl.NumberFormat('pt-BR');
-const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });
+const nf = new Intl.NumberFormat(locale);
+const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 function relative(iso: string): string {
   const diff = (new Date(iso).getTime() - Date.now()) / 1000;
   const abs = Math.abs(diff);
@@ -64,7 +64,13 @@ const ICON: Record<Activity['kind'], LucideName> = {
   'pr-merge': 'gitMerge',
   repo: 'folderPlus',
 };
-const updated = new Intl.DateTimeFormat('pt-BR', {
+const TEXT: Record<Activity['kind'], (repo: string) => string> = {
+  push: t.push,
+  'pr-open': t.prOpen,
+  'pr-merge': t.prMerge,
+  repo: t.repo,
+};
+const updated = new Intl.DateTimeFormat(locale, {
   day: 'numeric',
   month: 'long',
   year: 'numeric',
@@ -76,14 +82,14 @@ const profile = `https://github.com/${GITHUB_USER}`;
 <section id="github" class="container gh" aria-labelledby="gh-title">
   <div class="card" data-gh-card>
     <header class="head">
-      <h2 id="gh-title" class="eyebrow">Atividade no GitHub</h2>
+      <h2 id="gh-title" class="eyebrow">{t.title}</h2>
       <a class="profile" href={profile} target="_blank" rel="noopener noreferrer"
         >@{GITHUB_USER} <span aria-hidden="true">→</span></a
       >
     </header>
 
     <p class="total">
-      <strong>{nf.format(data.total)}</strong>{' '}{data.total === 1 ? 'contribuição' : 'contribuições'} no último ano
+      <strong>{nf.format(data.total)}</strong>{' '}{t.contributions(data.total)} {t.lastYear}
     </p>
 
     <div class="scroller" data-gh-scroller>
@@ -93,7 +99,7 @@ const profile = `https://github.com/${GITHUB_USER}`;
         height={height}
         viewBox={`0 0 ${width} ${height}`}
         role="group"
-        aria-label={`Calendário de contribuições dos últimos 12 meses. Use as setas para navegar pelos dias.`}
+        aria-label={t.calendarAria}
         data-reveal="cells"
         data-gh-heatmap
       >
@@ -124,11 +130,11 @@ const profile = `https://github.com/${GITHUB_USER}`;
     </div>
 
     <div class="legend" aria-hidden="true">
-      <span>Menos</span>
+      <span>{t.less}</span>
       <svg width={5 * STEP - GAP} height={CELL} viewBox={`0 0 ${5 * STEP - GAP} ${CELL}`}>
         {[0, 1, 2, 3, 4].map((l) => <rect x={l * STEP} width={CELL} height={CELL} rx="2" class={`l${l}`} />)}
       </svg>
-      <span>Mais</span>
+      <span>{t.more}</span>
     </div>
 
     <!-- Visual apenas: o leitor de tela recebe o mesmo texto como aria-label do quadrado focado. -->
@@ -137,13 +143,13 @@ const profile = `https://github.com/${GITHUB_USER}`;
     {
       data.activity.length > 0 && (
         <div class="recent">
-          <h3 class="recent-title">Atividade recente</h3>
+          <h3 class="recent-title">{t.recent}</h3>
           <ul>
             {data.activity.map((a) => (
               <li>
                 <svg class="act-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" set:html={LUCIDE[ICON[a.kind]]} />
                 <a href={a.url} target="_blank" rel="noopener noreferrer">
-                  {a.text}
+                  {TEXT[a.kind](activityRepo(a))}
                 </a>
                 <time datetime={a.date}>{relative(a.date)}</time>
               </li>
@@ -153,7 +159,7 @@ const profile = `https://github.com/${GITHUB_USER}`;
       )
     }
 
-    <p class="updated">Atualizado em {updated}</p>
+    <p class="updated">{t.updated} {updated}</p>
   </div>
 </section>
 

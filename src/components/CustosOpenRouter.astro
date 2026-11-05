@@ -10,8 +10,27 @@ import KpiRow from './charts/KpiRow.astro';
 import StackedBarChart from './charts/StackedBarChart.astro';
 import AreaChart from './charts/AreaChart.astro';
 import ModelBreakdown from './charts/ModelBreakdown.astro';
+import { getLang, dayLabel } from '../i18n';
 
-const { modelos, painelA: A, painelB: B } = dados;
+const { modelos, painelA: A0, painelB: B0 } = dados;
+const lang = getLang(Astro.currentLocale);
+const en = lang === 'en';
+
+// No inglês, os dias "27/10" viram "Oct 27" (o JSON guarda o formato brasileiro).
+const dias = <T extends { dia: string }>(arr: T[]): T[] => arr.map((d) => ({ ...d, dia: dayLabel(d.dia, lang) }));
+const A = {
+  ...A0,
+  periodo: en ? 'Oct 1 – Oct 31, 2026, GMT-3' : A0.periodo,
+  custoDiario: dias(A0.custoDiario),
+  gastoDiario: dias(A0.gastoDiario),
+};
+const B = {
+  ...B0,
+  periodo: en ? 'Sep 30 – Oct 29, 2026, GMT-3' : B0.periodo,
+  requisicoes: dias(B0.requisicoes),
+  tokens: dias(B0.tokens),
+  cache: dias(B0.cache),
+};
 
 // Checagem no build: a soma das barras diárias de cada modelo precisa bater com a
 // coluna "soma" oficial da OpenRouter (tolerância de $0.001). Se o JSON for
@@ -41,14 +60,21 @@ const unicoComTodos =
 // Parágrafo de leitura: só fatos dos dados. Montado como string porque, no template,
 // o Astro descarta a quebra de linha ao lado de uma {expressão} e cola as palavras.
 const m = (id: string) => porId[id].nome;
-const leitura =
-  `De 01 a 31/10, o custo total foi de ≈ $${A.custoTotal.toFixed(2)}. ` +
-  `O modelo mais caro foi o ${m('haiku')}, com $${soma('haiku')} (${pct('haiku')}% do total), ` +
-  `seguido do ${m('gpt-4.1')}, o juiz do eval, com $${soma('gpt-4.1')} (${pct('gpt-4.1')}%): juntos, ${dupla}% do gasto. ` +
-  `${m('gemini')} somou $${soma('gemini')} (${pct('gemini')}%), ${m('gpt-4o-mini')} $${soma('gpt-4o-mini')} ` +
-  `(${pct('gpt-4o-mini')}%) e ${m('deepseek')} $${soma('deepseek')} (${pct('deepseek')}%). ` +
-  `O dia de maior gasto foi ${pico.dia}, com $${pico.valor.toFixed(3)}` +
-  `${unicoComTodos ? ', o único em que os cinco modelos foram chamados' : ''}.`;
+const leitura = en
+  ? `From Oct 1 to Oct 31, total cost was ≈ $${A.custoTotal.toFixed(2)}. ` +
+    `The most expensive model was ${m('haiku')}, at $${soma('haiku')} (${pct('haiku')}% of the total), ` +
+    `followed by ${m('gpt-4.1')}, the eval's judge, at $${soma('gpt-4.1')} (${pct('gpt-4.1')}%): together, ${dupla}% of the spend. ` +
+    `${m('gemini')} added up to $${soma('gemini')} (${pct('gemini')}%), ${m('gpt-4o-mini')} $${soma('gpt-4o-mini')} ` +
+    `(${pct('gpt-4o-mini')}%) and ${m('deepseek')} $${soma('deepseek')} (${pct('deepseek')}%). ` +
+    `The highest-spend day was ${pico.dia}, at $${pico.valor.toFixed(3)}` +
+    `${unicoComTodos ? ', the only day all five models were called' : ''}.`
+  : `De 01 a 31/10, o custo total foi de ≈ $${A.custoTotal.toFixed(2)}. ` +
+    `O modelo mais caro foi o ${m('haiku')}, com $${soma('haiku')} (${pct('haiku')}% do total), ` +
+    `seguido do ${m('gpt-4.1')}, o juiz do eval, com $${soma('gpt-4.1')} (${pct('gpt-4.1')}%): juntos, ${dupla}% do gasto. ` +
+    `${m('gemini')} somou $${soma('gemini')} (${pct('gemini')}%), ${m('gpt-4o-mini')} $${soma('gpt-4o-mini')} ` +
+    `(${pct('gpt-4o-mini')}%) e ${m('deepseek')} $${soma('deepseek')} (${pct('deepseek')}%). ` +
+    `O dia de maior gasto foi ${pico.dia}, com $${pico.valor.toFixed(3)}` +
+    `${unicoComTodos ? ', o único em que os cinco modelos foram chamados' : ''}.`;
 
 // rótulo visível no topo das colunas de cache: % do prompt que veio do cache
 const rotulosCache = B.cache.map((d) => {
@@ -57,66 +83,102 @@ const rotulosCache = B.cache.map((d) => {
   return `${(((v.cached ?? 0) / total) * 100).toFixed(1)}%`;
 });
 
-const kpis = [
-  { valor: `≈ $${A.custoTotal.toFixed(2)}`, label: 'Custo total · 01–31/10' },
-  { valor: B.kpis.gastoTotal, label: 'Gasto total · 30/09–29/10' },
-  { valor: B.kpis.requisicoes, label: 'Requisições' },
-  { valor: B.kpis.volumeTokens, label: 'Volume de tokens' },
-  { valor: B.kpis.taxaCache, label: 'Taxa de cache' },
-  { valor: B.kpis.custoMedio, label: 'Custo médio por 1M tokens' },
+const T = en
+  ? {
+      intro:
+        "Every eval call (classifiers and judge) went through OpenRouter. The panels below reproduce the account's Activity dashboard for the project period.",
+      fonte: `Source: OpenRouter — Activity dashboard (${A.periodo} for total cost; ${B.periodo} for the rest)`,
+      kpis: ['Total cost · Oct 1–31', 'Total spend · Sep 30–Oct 29', 'Requests', 'Token volume', 'Cache rate', 'Average cost per 1M tokens'],
+      custoModelo: 'Cost by model',
+      custoDiario: 'Daily cost by model (USD)',
+      caption: 'Cost by model over the period: minimum, maximum, average, sum and share of the total',
+      gasto: 'Daily spend',
+      gastoTotal: 'Total daily spend (USD)',
+      req: 'Requests by model',
+      reqTitulo: 'Requests per day and model',
+      tokens: 'Tokens by type',
+      tokensTitulo: 'Tokens per day and type',
+      cache: 'Prompt cache',
+      cacheTitulo: 'Prompt tokens per day, with and without cache',
+      cacheResumo: 'Cached share per day',
+      cacheObs: 'Label on top: % of prompt tokens served from cache.',
+      nota: 'Daily values extracted from the dashboard charts; totals as reported by OpenRouter. Panel B covers up to Oct 29.',
+    }
+  : {
+      intro:
+        'Todas as chamadas do eval (classificadores e juiz) passaram pelo OpenRouter. Os painéis abaixo reproduzem o dashboard de Activity da conta no período do projeto.',
+      fonte: `Fonte: OpenRouter — painel de Activity (${A.periodo} para o custo total; ${B.periodo} para os demais)`,
+      kpis: ['Custo total · 01–31/10', 'Gasto total · 30/09–29/10', 'Requisições', 'Volume de tokens', 'Taxa de cache', 'Custo médio por 1M tokens'],
+      custoModelo: 'Custo por modelo',
+      custoDiario: 'Custo diário por modelo (US$)',
+      caption: 'Custo por modelo no período: mínimo, máximo, média, soma e participação no total',
+      gasto: 'Gasto diário',
+      gastoTotal: 'Gasto diário total (US$)',
+      req: 'Requisições por modelo',
+      reqTitulo: 'Requisições por dia e modelo',
+      tokens: 'Tokens por tipo',
+      tokensTitulo: 'Tokens por dia e tipo',
+      cache: 'Cache de prompt',
+      cacheTitulo: 'Tokens de prompt por dia, com e sem cache',
+      cacheResumo: 'Fração cacheada por dia',
+      cacheObs: 'Rótulo no topo: % dos tokens de prompt servidos do cache.',
+      nota: 'Valores diários extraídos dos gráficos do painel; totais conforme a OpenRouter. O Painel B cobre até 29/10.',
+    };
+
+const kpiValores = [
+  `≈ $${A.custoTotal.toFixed(2)}`,
+  B.kpis.gastoTotal,
+  B.kpis.requisicoes,
+  B.kpis.volumeTokens,
+  B.kpis.taxaCache,
+  B.kpis.custoMedio,
 ];
+const kpis = kpiValores.map((valor, i) => ({ valor, label: T.kpis[i] }));
 ---
 
 <div class="custos">
-  <p>
-    Todas as chamadas do eval (classificadores e juiz) passaram pelo OpenRouter. Os painéis abaixo reproduzem o
-    dashboard de Activity da conta no período do projeto.
-  </p>
+  <p>{T.intro}</p>
 
   <div class="bloco">
     <KpiRow itens={kpis} />
-    <p class="fonte">
-      Fonte: OpenRouter — painel de Activity ({A.periodo} para o custo total; {B.periodo} para os demais)
-    </p>
+    <p class="fonte">{T.fonte}</p>
   </div>
 
-  <ChartPanel titulo="Custo por modelo" periodo={A.periodo} series={modelos} largo>
-    <StackedBarChart titulo="Custo diário por modelo (US$)" series={modelos} days={A.custoDiario} yFormat="usd" />
-    <ModelBreakdown linhas={A.tabela} modelos={modelos} caption="Custo por modelo no período: mínimo, máximo, média, soma e participação no total" />
+  <ChartPanel titulo={T.custoModelo} periodo={A.periodo} series={modelos} largo>
+    <StackedBarChart titulo={T.custoDiario} series={modelos} days={A.custoDiario} yFormat="usd" />
+    <ModelBreakdown linhas={A.tabela} modelos={modelos} caption={T.caption} />
   </ChartPanel>
 
   <div class="grid">
-    <ChartPanel titulo="Gasto diário" periodo={A.periodo} series={[{ id: 'spend', nome: 'OpenRouter Spend', cor: '#EE562F' }]}>
-      <AreaChart id="gasto" titulo="Gasto diário total (US$)" nomeSerie="OpenRouter Spend" cor="#EE562F" pontos={A.gastoDiario} yFormat="usd" />
+    <ChartPanel titulo={T.gasto} periodo={A.periodo} series={[{ id: 'spend', nome: 'OpenRouter Spend', cor: '#EE562F' }]}>
+      <AreaChart id="gasto" titulo={T.gastoTotal} nomeSerie="OpenRouter Spend" cor="#EE562F" pontos={A.gastoDiario} yFormat="usd" />
       <p class="obs">BYOK: ${A.byok}</p>
     </ChartPanel>
 
-    <ChartPanel titulo="Requisições por modelo" periodo={B.periodo} series={modelos}>
-      <StackedBarChart titulo="Requisições por dia e modelo" series={modelos} days={B.requisicoes} yFormat="int" />
+    <ChartPanel titulo={T.req} periodo={B.periodo} series={modelos}>
+      <StackedBarChart titulo={T.reqTitulo} series={modelos} days={B.requisicoes} yFormat="int" />
     </ChartPanel>
 
-    <ChartPanel titulo="Tokens por tipo" periodo={B.periodo} series={B.tokensSeries}>
-      <StackedBarChart titulo="Tokens por dia e tipo" series={B.tokensSeries} days={B.tokens} yFormat="tokens" />
+    <ChartPanel titulo={T.tokens} periodo={B.periodo} series={B.tokensSeries}>
+      <StackedBarChart titulo={T.tokensTitulo} series={B.tokensSeries} days={B.tokens} yFormat="tokens" />
     </ChartPanel>
 
-    <ChartPanel titulo="Cache de prompt" periodo={B.periodo} series={B.cacheSeries}>
+    <ChartPanel titulo={T.cache} periodo={B.periodo} series={B.cacheSeries}>
       <StackedBarChart
-        titulo="Tokens de prompt por dia, com e sem cache"
+        titulo={T.cacheTitulo}
         series={B.cacheSeries}
         days={B.cache}
         yFormat="tokens"
         rotulosTopo={rotulosCache}
-        resumo={`Fração cacheada por dia: ${B.cache.map((d, i) => `${d.dia} ${rotulosCache[i]}`).join(', ')}.`}
+        resumo={`${T.cacheResumo}: ${B.cache.map((d, i) => `${d.dia} ${rotulosCache[i]}`).join(', ')}.`}
       />
-      <p class="obs">Rótulo no topo: % dos tokens de prompt servidos do cache.</p>
+      <p class="obs">{T.cacheObs}</p>
     </ChartPanel>
   </div>
 
   <p>{leitura}</p>
 
-  <p class="nota">
-    Valores diários extraídos dos gráficos do painel; totais conforme a OpenRouter. O Painel B cobre até 29/10.
-  </p>
+  <p class="nota">{T.nota}</p>
 </div>
 
 <style>

@@ -1,5 +1,6 @@
 ---
 import './chart.css';
+import { getLang, ui } from '../../i18n';
 import type { Serie } from './scale';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   largo?: boolean;
 }
 const { titulo, periodo, series = [], largo = false } = Astro.props;
+const t = ui[getLang(Astro.currentLocale)].charts;
 ---
 
 <figure class:list={['panel', { largo }]}>
@@ -16,7 +18,7 @@ const { titulo, periodo, series = [], largo = false } = Astro.props;
     <h3 class="titulo">{titulo}</h3>
     {
       series.length > 0 && (
-        <ul class="legenda" aria-label="Legenda">
+        <ul class="legenda" aria-label={t.legend}>
           {series.map((s) => (
             <li>
               <span class="ch-sw" style={`--sw:${s.cor}`} aria-hidden="true" />
@@ -28,7 +30,7 @@ const { titulo, periodo, series = [], largo = false } = Astro.props;
     }
   </header>
   <slot />
-  <figcaption class="fonte">Fonte: OpenRouter — painel de Activity ({periodo})</figcaption>
+  <figcaption class="fonte">{t.source} ({periodo})</figcaption>
 </figure>
 
 <style>

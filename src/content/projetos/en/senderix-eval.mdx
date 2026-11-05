@@ -1,0 +1,287 @@
+---
+titulo: senderix-eval
+resumo: Quality CI for Senderix's LLM classifier. On every prompt or model change, the eval measures accuracy, format, summary quality, latency and cost, compares them with the production version and blocks the merge if quality drops.
+area: LLM Evaluation
+stack:
+  - Python
+  - Pydantic
+  - OpenRouter
+  - GitHub Actions
+  - Docker
+  - Jinja2
+repo: https://github.com/pedroatilagc/senderix-eval
+data: 2026-10-31
+# English translation of ../pt/senderix-eval.mdx. Keep both in sync when editing.
+status: concluído
+tempoDedicado: ≈ 20h
+destaque: true
+ordem: 1
+---
+
+import Terminal from '../../../components/Terminal.astro';
+import Decisao from '../../../components/Decisao.astro';
+import Diagrama from '../../../components/Diagrama.astro';
+import Fontes from '../../../components/Fontes.astro';
+import CustosOpenRouter from '../../../components/CustosOpenRouter.astro';
+
+## The problem
+
+An LLM classifier changes all the time: the prompt gets refined, the model is swapped for a cheaper one, the provider retires the version running in production. Two of the models tested in this project were discontinued during development. Each of these changes can degrade quality **without breaking anything visible**: the code keeps running, the API keeps responding, and the error only shows up when a customer complains.
+
+The goal of senderix-eval is simple: **no change in the AI's behavior reaches customers without being measured.**
+
+## Context: the Senderix classifier
+
+[Senderix](https://senderix.com.br) is a SaaS for automating WhatsApp campaigns, used by real estate agencies, clinics, salons and barbershops, digital product sellers and collections teams. After each send, contacts reply, and those replies need to be triaged fast: an interested lead goes cold in hours, and an ignored unsubscribe request turns into a spam report.
+
+An LLM classifier reads each reply and returns two fields:
+
+| Field | Values | What it's for |
+|---|---|---|
+| `categoria` (category) | `interessado` (interested), `duvida` (question), `opt_out`, `reclamacao` (complaint), `fora_de_contexto` (off-topic) | Decides what happens to the contact |
+| `resumo` (summary) | one sentence in Portuguese | Lets the agent understand the message at a glance |
+
+The category is what drives the system: it moves the contact to a column in the support kanban, removes anyone who asked to opt out, and powers the AI reply block in automation flows. That's why errors have a **real and asymmetric cost**:
+
+- **False opt-out:** an interested customer leaves the list and never gets offers again.
+- **Missed opt-out:** someone who asked to stop keeps getting messages, and the risk of reports and of Meta banning the number goes up.
+- **Lead classified as a question:** the opportunity lands in the wrong kanban column and goes cold.
+
+## Architecture
+
+<Diagrama
+  nome="senderix-eval-en"
+  alt="Eval flow: a PR that changes the prompt, model, dataset or thresholds triggers GitHub Actions. If no eval file changed, the check goes green without calling the API. If something changed, the runner executes the golden dataset, the LLM-as-a-judge scores the summaries and the comparator checks the new run against the baseline. An OK verdict produces a PR comment and a report; WARNING also sends a Discord alert; CRITICAL produces a comment and an alert and blocks the merge."
+  legenda="How a PR flows through the eval. Adapted from the README diagram."
+/>
+
+Each stage is a small Python module, with Pydantic contracts at the boundaries:
+
+| Stage | What it does |
+|---|---|
+| **Classifier** | Sends the message to the model through OpenRouter and validates the response against a Pydantic contract. |
+| **Runner** | Runs every case in the golden dataset and records, per case, correctness, format, latency, tokens and cost. |
+| **Judge** | A stronger, fixed model scores the summary from 1 to 5 against the reference summary. |
+| **Comparator** | Compares the new run with the approved baseline: regressions, improvements and accuracy per category. |
+| **Thresholds** | Turn the comparison into a verdict: `ok`, `aviso` (warning) or `critico` (critical). |
+| **Report** | A self-contained HTML page with KPIs, SVG charts and the regression and improvement tables. |
+| **Alerts** | A Discord card on warning or critical. |
+| **Drift** | Tracks the moving average of runs and catches gradual drops that no single comparison picks up. |
+| **CI** | Orchestrates everything on every PR and uses the exit code to block the merge. |
+
+The model output contract is where everything starts. A made-up category, an extra field or an empty summary is rejected at the boundary:
+
+```python
+Categoria = Literal["interessado", "duvida", "opt_out", "reclamacao", "fora_de_contexto"]
+
+class Classificacao(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    categoria: Categoria
+    resumo: str = Field(min_length=1, max_length=200)
+```
+
+## Development phases
+
+The dates below come from the versioned files themselves (the `criado_em` field of prompts and datasets) and from the commit history.
+
+### 1. Classifier and first prompts (Oct 26)
+
+Prompt **v1** defines the five categories and a tie-break rule between opt-out and complaint. **v2** came from the first systematic error: price and payment questions were classified as `duvida` (question), when someone asking the price wants to buy.
+
+### 2. Golden dataset v1 (Oct 27)
+
+31 hand-written messages, each with the expected category, ideal summary, difficulty and notes explaining every business decision. The rule is that the answer key is **never generated by an LLM**: it would inherit the biases of the very thing it's meant to evaluate.
+
+### 3. Prompts v3 to v5 and model comparison (Oct 28)
+
+- **v3:** fixed the summary language and added a one-shot answer example. It eliminated empty, truncated and wrong-language answers from one of the models.
+- **v4:** a general intent criterion; opt-out now includes lack of interest and irritation with repeated messages; guard rules for `duvida` and `reclamacao`. Reason: errors shared by all four models.
+- **v5:** separates business hours (`duvida`) from free time slots to book (`interessado`), fixing a regression introduced by v4.
+
+The rule used throughout the process: **when every model gets the same case wrong, the prompt is missing an instruction; when only one does, it's a limitation of that model.**
+
+### 4. Holdout and LLM-as-a-judge (Oct 29)
+
+Golden v1 had been used to tune the prompts, so it no longer measured generalization. **Golden v2** was written afterwards, with 30 unseen messages, only for measuring. The judge (`juiz_v1`) arrived the same day, with a 1-to-5 rubric for the summary.
+
+### 5. CI, baseline and Docker (Oct 30)
+
+A GitHub Actions workflow, a versioned baseline, `eval_ci.py` as the entry point with well-defined exit codes, an automatic PR comment, a Discord alert and a Docker image. `main` started requiring the **Senderix Eval** check.
+
+## Metrics and regression detection
+
+Each run measures five dimensions, deliberately kept separate:
+
+1. **Category accuracy** (among responses with a valid format)
+2. **Format compliance** (valid JSON against the contract)
+3. **Summary quality** (the judge's 1-to-5 score)
+4. **Latency** (P50 and P95)
+5. **Cost** (taken from the OpenRouter response itself, with the judge's cost tracked separately)
+
+### Choosing the production model
+
+The eval itself was used to choose Senderix's model. Setup: prompt v5, golden v2 (30 unseen cases), judge `openai/gpt-4.1`.
+
+| Model | Accuracy | Format | Summary score | P50 | P95 | Cost / 10k msgs |
+|---|---|---|---|---|---|---|
+| **google/gemini-2.5-flash** | **96.7%** | 100% | 3.93 | **1.0 s** | **1.2 s** | $1.94 |
+| anthropic/claude-haiku-4.5 | 90.0% | 100% | 4.27 | 1.3 s | 2.4 s | $7.51 |
+| deepseek/deepseek-v4-flash | 86.7% | 100% | **4.60** | 2.6 s | 5.6 s | **$0.36** |
+| openai/gpt-4o-mini | 86.7% | 100% | 4.00 | 1.5 s | 2.7 s | $0.78 |
+
+Gemini 2.5 Flash went to production: it made the fewest opt-out errors (the highest-risk category), had the most stable latency and a low cost in absolute terms. DeepSeek writes the best summaries and is five times cheaper, but it spikes to 15 s to classify a single message, which makes it a fit only for batch processing. Gemini's weak spot is shorter summaries that leave out dates and times.
+
+### From number to verdict
+
+The thresholds live in `limiares.yaml` (keys kept as in the repository, comments translated):
+
+```yaml
+queda_aviso_pp: 5.0             # accuracy drop that triggers a warning
+queda_critico_pp: 10.0          # drop that triggers critical (blocks the merge)
+queda_nota_resumo_aviso: 0.3    # drop in average summary score that triggers a warning
+categorias_criticas:
+  - opt_out                     # any regression here triggers a warning
+drift:
+  janela: 5                     # moving average window size
+  min_execucoes: 6              # below this: not enough history
+  queda_taxa_pp: 5.0
+  queda_nota_resumo: 0.3
+```
+
+With 30 cases, **each case is worth 3.3 pp**, and the same configuration, with no changes at all, swings by one case between runs. Hence the calibration: 1 case is noise, 2 cases (6.7 pp) trigger a warning, 3 cases (10 pp) trigger critical.
+
+Below, the comparator running over two real runs saved in the repository: the baseline (Gemini) against GPT-4o-mini. No API calls, just the comparison. The output is shown exactly as the tool prints it, in Portuguese.
+
+<Terminal
+  titulo="senderix-eval — comparador.py"
+  legenda="Real output, run over the JSONs in resultados/. Exit code 2 is what blocks the merge in CI. (Taxa de acerto = accuracy; Regressões = regressions; Veredito = verdict.)"
+  linhas={[
+    { cmd: 'python comparador.py resultados/20261029_154701_v5_google_gemini-2.5-flash.json resultados/20261029_154405_v5_openai_gpt-4o-mini.json' },
+    { out: 'Base: v5 | google/gemini-2.5-flash | 2026-10-29T15:47:01' },
+    { out: 'Nova: v5 | openai/gpt-4o-mini | 2026-10-29T15:44:05' },
+    { out: '' },
+    { out: 'Taxa de acerto: 96.7% → 86.7% (-10.0 pp)' },
+    { out: 'Nota do resumo: 3.93 → 4.00' },
+    { out: '' },
+    { out: 'Acurácia por categoria:' },
+    { out: '    duvida             100.0% → 100.0%' },
+    { out: '    fora_de_contexto   100.0% → 100.0%' },
+    { out: '  ▼ interessado        100.0% →  85.7%' },
+    { out: '  ▼ opt_out             87.5% →  75.0%' },
+    { out: '  ▼ reclamacao         100.0% →  83.3%' },
+    { out: '' },
+    { out: 'Regressões (3):' },
+    { out: '  ✗ caso-002: esperado interessado | antes interessado → agora duvida' },
+    { out: '  ✗ caso-005: esperado reclamacao | antes reclamacao → agora opt_out' },
+    { out: '  ✗ caso-008: esperado opt_out | antes opt_out → agora fora_de_contexto' },
+    { out: '' },
+    { out: 'Melhorias (0):' },
+    { out: '' },
+    { out: 'Veredito: CRITICO' },
+    { out: '  - [critico] taxa de acerto caiu 10.0 pp' },
+    { out: '  - [aviso] regressão em categoria crítica: caso-008 (opt_out)' },
+    { cmd: 'echo $?' },
+    { out: '2' },
+  ]}
+/>
+
+### Drift: the drop no PR shows
+
+The comparator looks at a pair of runs. A gradual decline, where each step stays below the thresholds, would go unnoticed. `drift.py` compares the moving average of the first runs of a given configuration with that of the last ones. It was validated with synthetic history (the `queda_lenta`, "slow decline", scenario): **9 out of 9 consecutive pairs passed the comparator, and drift flagged the accumulated 8 pp drop.** Simulated data is never written to `resultados/`.
+
+## CI/CD
+
+The workflow runs on **every PR to `main`** and on manual dispatch. The first step checks whether any relevant file changed (prompts, dataset, baseline, templates, configuration, thresholds, dependencies, the workflow itself or the root `.py` files). If nothing changed, the check finishes green in seconds, with no API cost.
+
+The contract between the eval and CI is the exit code:
+
+| Code | Meaning | Blocks the merge? |
+|---|---|---|
+| `0` | OK or warning | No |
+| `1` | Incorrect usage, missing baseline or baseline from another dataset | Yes |
+| `2` | Critical regression | Yes |
+| `3` | Infrastructure error (API down, invalid key) | Yes |
+
+On every push, the bot **updates** the same PR comment (instead of piling up comments), with the verdict and the base × new table. This is the table `eval_ci.py` generated (`saida_ci/resumo.md`) for the validation scenario, in which the production model was switched from Gemini to GPT-4o-mini:
+
+| Metric | Base | New | Change |
+|---|---|---|---|
+| Accuracy | 96.7% | 86.7% | −10.0 pp |
+| Valid format | 100.0% | 100.0% | +0.0 pp |
+| Summary score (1–5) | 3.93 | 4.00 | +0.07 |
+| P50 latency | 1,046 ms | 1,451 ms | +405 ms |
+| P95 latency | 1,240 ms | 2,679 ms | +1,439 ms |
+| Classifier cost | $0.00583 | $0.00233 | −0.00350 |
+
+In the test PR with that switch, the result was a **CRITICAL verdict**, a Discord alert and a merge blocked by `main`'s branch protection, with no manual intervention.
+
+Secrets (`OPENROUTER_API_KEY`, `DISCORD_WEBHOOK_URL`) live in GitHub Secrets and only come in at runtime, including in the Docker image. PRs from forks don't receive secrets; in that case the eval is skipped with a message explaining why.
+
+## Technical decisions
+
+<Decisao titulo="Detect changes inside the job, not with a path filter on the trigger">
+  A required check with `paths:` on the trigger stays **pending forever** on PRs that don't touch the eval, and blocks the merge. By always running the workflow and deciding inside the job, the check always reports.
+
+  **Trade-off:** every PR spins up a runner, even if only for a few seconds.
+</Decisao>
+
+<Decisao titulo="Thresholds calibrated to the dataset size">
+  The 3% / 8% suggested in industry references assume larger datasets. With 30 cases, they would trigger false alerts constantly. Warning from 2 cases, critical from 3.
+
+  **Trade-off:** the calibration is pragmatic, not statistical. If the dataset size changes, it needs recalibrating.
+</Decisao>
+
+<Decisao titulo="opt_out as a critical category">
+  Getting opt-out wrong has regulatory and commercial consequences (the number getting banned), so any regression in this category triggers a warning, even for a single case.
+
+  **Trade-off:** the most ambiguous opt-out case in the dataset sometimes triggers false warnings.
+</Decisao>
+
+<Decisao titulo="Format and accuracy measured separately">
+  A single rate mixes two problems with different fixes: format robustness and classification rules. Format failures count toward the metric; infrastructure failures stop the eval, because they would make the whole run unreliable.
+
+  **Trade-off:** two numbers to track instead of one.
+</Decisao>
+
+<Decisao titulo="A fixed, stronger LLM-as-a-judge with a rubric">
+  The summary can't be compared by text equality. An explicit rubric, a justification before the score and `temperature=0` keep scores consistent; a single judge makes scores comparable across models.
+
+  **Trade-off:** the judge costs 5 to 25 times as much as the classifier being evaluated (about $0.027 per run), and it's from the OpenAI family, which opens the risk of self-preference.
+</Decisao>
+
+<Decisao titulo="Versioned baseline and manual promotion">
+  The comparison reference lives in the repository and only changes by human decision, reviewed in the PR. CI never writes to the baseline or makes commits; `promover_baseline.py` rejects runs whose configuration doesn't match production.
+
+  **Trade-off:** one manual step for every approved change. Also running the eval on `main` for every PR would double the cost.
+</Decisao>
+
+<Decisao titulo="Exit codes as the contract with CI">
+  `1` (usage) and `2` (critical) never collide. That's why `comparador.py` doesn't use `argparse`, which exits with `2` on a usage error. Failures in the alert or the report never change the exit code.
+
+  **Trade-off:** argument parsing done by hand.
+</Decisao>
+
+## Lessons learned
+
+- **When every model gets the same case wrong, the prompt is missing an instruction.** When only one does, it's a limitation of that model. This rule guided the evolution from v2 to v5.
+- **Never tune the prompt by looking at the errors of a set you use to measure generalization.** The moment that happens, it becomes just another practice set, and a new unseen set is needed.
+- **With a small dataset, noise is the size of one case.** Even with `temperature=0`, the same configuration varies between runs. The planned improvement is to confirm regressions by re-running only the cases that regressed before alerting.
+- **The answer key's category is a business decision**, not a guess about what the model will answer: the question is "what should Senderix do with this contact?".
+
+## Costs and usage (OpenRouter)
+
+<CustosOpenRouter />
+
+## Sources and references
+
+<Fontes
+  itens={[
+    { titulo: 'senderix-eval', url: 'https://github.com/pedroatilagc/senderix-eval', nota: 'project repository (code, README and results)' },
+    { titulo: 'Senderix', url: 'https://senderix.com.br', nota: 'the product that uses the classifier' },
+    { titulo: 'OpenRouter', url: 'https://openrouter.ai', nota: 'model access layer' },
+    { titulo: 'Pydantic', url: 'https://docs.pydantic.dev', nota: 'contracts and validation' },
+    { titulo: 'GitHub Actions', url: 'https://docs.github.com/actions', nota: 'runs the eval on every PR' },
+    { titulo: 'Jinja', url: 'https://jinja.palletsprojects.com', nota: 'HTML report template' },
+  ]}
+/>

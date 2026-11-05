@@ -1,5 +1,8 @@
 ---
 import { STACK } from '../data/stack';
+import { getLang, ui } from '../i18n';
+
+const label = ui[getLang(Astro.currentLocale)].stack.label;
 
 /*
   As duas cópias saem do MESMO array. A segunda existe só para o loop visual:
@@ -9,7 +12,7 @@ import { STACK } from '../data/stack';
 const copies = [{ duplicate: false }, { duplicate: true }];
 ---
 
-<section class="marquee" data-marquee aria-label="Tecnologias que uso">
+<section class="marquee" data-marquee aria-label={label}>
   <div class="container head">
     <span class="eyebrow">Stack</span>
   </div>

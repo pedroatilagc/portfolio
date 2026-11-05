@@ -1,0 +1,15 @@
+%% Eval flow in CI (English version of senderix-eval.mmd). Adapted from the senderix-eval README.
+flowchart TD
+    A["PR changes prompt, model,<br/>dataset or thresholds"] --> B["GitHub Actions"]
+    B --> C{"Did anything in<br/>the eval change?"}
+    C -- no --> D["Green check<br/>without calling the API"]
+    C -- yes --> E["Runner<br/>golden dataset × config"]
+    E --> F["LLM-as-a-judge<br/>summary score"]
+    F --> G["Comparator<br/>new × baseline"]
+    G --> H{"Verdict"}
+    H -- OK --> I["PR comment<br/>+ HTML report"]
+    H -- WARNING --> K["PR comment<br/>+ Discord alert"]
+    H -- CRITICAL --> J["Comment + Discord<br/>+ merge blocked"]
+
+    classDef critico stroke:#EE562F,stroke-width:2px;
+    class J critico;

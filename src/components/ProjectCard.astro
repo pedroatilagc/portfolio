@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import { formatarData } from '../utils/format';
+import { getLang, ui, projectUrl, slugOf } from '../i18n';
 
 interface Props {
   projeto: CollectionEntry<'projetos'>;
@@ -8,7 +9,8 @@ interface Props {
 }
 const { projeto, delay = 0 } = Astro.props;
 const { titulo, resumo, area, stack, data, tempoDedicado } = projeto.data;
-const href = `/projetos/${projeto.id}/`;
+const lang = getLang(Astro.currentLocale);
+const href = projectUrl(lang, slugOf(projeto.id));
 ---
 
 <article class="card" data-reveal="clip" data-reveal-delay={delay}>
@@ -22,10 +24,10 @@ const href = `/projetos/${projeto.id}/`;
   </ul>
   <div class="foot">
     <p class="meta">
-      <time datetime={data.toISOString().slice(0, 10)}>{formatarData(data)}</time>
+      <time datetime={data.toISOString().slice(0, 10)}>{formatarData(data, lang)}</time>
       {tempoDedicado && <span> · {tempoDedicado}</span>}
     </p>
-    <span class="cta" aria-hidden="true">Ver projeto <span class="arrow">→</span></span>
+    <span class="cta" aria-hidden="true">{ui[lang].card.cta} <span class="arrow">→</span></span>
   </div>
 </article>
 

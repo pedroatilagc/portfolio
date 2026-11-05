@@ -5,6 +5,7 @@
  * (a tabela continua sendo uma <table> para leitores de tela).
  */
 import './chart.css';
+import { getLang, ui } from '../../i18n';
 import { formatar, type Serie } from './scale';
 
 interface Linha {
@@ -21,6 +22,7 @@ interface Props {
   caption: string;
 }
 const { linhas, modelos, caption } = Astro.props;
+const t = ui[getLang(Astro.currentLocale)].charts;
 const porId = new Map(modelos.map((m) => [m.id, m]));
 const ordenadas = [...linhas].sort((a, b) => b.soma - a.soma);
 // valores oficiais da tabela: mostramos com as casas que a OpenRouter mostra
@@ -31,12 +33,12 @@ const usd = (v: number) => `$${+v.toPrecision(3)}`;
   <caption class="sr-only">{caption}</caption>
   <thead>
     <tr>
-      <th scope="col">Modelo</th>
+      <th scope="col">{t.model}</th>
       <th scope="col" class="n">Min</th>
       <th scope="col" class="n">Max</th>
-      <th scope="col" class="n">Média</th>
-      <th scope="col" class="n">Soma</th>
-      <th scope="col" class="p">% do total</th>
+      <th scope="col" class="n">{t.avg}</th>
+      <th scope="col" class="n">{t.sum}</th>
+      <th scope="col" class="p">{t.pctTotal}</th>
     </tr>
   </thead>
   <tbody>
@@ -51,9 +53,9 @@ const usd = (v: number) => `$${+v.toPrecision(3)}`;
             </th>
             <td class="n" data-label="Min">{usd(l.min)}</td>
             <td class="n" data-label="Max">{usd(l.max)}</td>
-            <td class="n" data-label="Média">{usd(l.media)}</td>
-            <td class="n soma" data-label="Soma">{usd(l.soma)}</td>
-            <td class="p" data-label="% do total">
+            <td class="n" data-label={t.avg}>{usd(l.media)}</td>
+            <td class="n soma" data-label={t.sum}>{usd(l.soma)}</td>
+            <td class="p" data-label={t.pctTotal}>
               <span class="pwrap">
                 <span class="barra" aria-hidden="true">
                   <span style={`width:${l.pct}%;background:${m.cor}`} />

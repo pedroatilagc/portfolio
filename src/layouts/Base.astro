@@ -5,6 +5,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { SITE } from '../data/site';
 import { pageTransition } from '../scripts/transition';
+import { getLang, ui, HTML_LANG, OG_LOCALE, LANGS, translatePath } from '../i18n';
 
 // Fontes self-hosted via @fontsource (font-display: swap já vem no CSS delas).
 import '@fontsource/fraunces/600.css';
@@ -22,14 +23,18 @@ interface Props {
   ogType?: 'website' | 'article';
 }
 
-const { title, description = SITE.descricao, ogType = 'website' } = Astro.props;
-const fullTitle = title ? `${title} · ${SITE.nome}` : SITE.titulo;
+const lang = getLang(Astro.currentLocale);
+const t = ui[lang];
+const { title, description = t.meta.description, ogType = 'website' } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE.nome}` : t.meta.title;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+// Mesma página nos dois idiomas: o Google usa isso para mostrar a versão certa a cada leitor.
+const alternates = LANGS.map((l) => ({ l, href: new URL(translatePath(Astro.url.pathname, l), Astro.site) }));
 const ogImage = new URL('/og.png', Astro.site);
 ---
 
 <!doctype html>
-<html lang="pt-BR">
+<html lang={HTML_LANG[lang]}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -37,6 +42,8 @@ const ogImage = new URL('/og.png', Astro.site);
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {alternates.map((a) => <link rel="alternate" hreflang={HTML_LANG[a.l]} href={a.href} />)}
+    <link rel="alternate" hreflang="x-default" href={alternates[0].href} />
     <meta name="theme-color" content="#191919" />
     <meta name="color-scheme" content="dark" />
 
@@ -45,7 +52,8 @@ const ogImage = new URL('/og.png', Astro.site);
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <meta property="og:type" content={ogType} />
-    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:locale" content={OG_LOCALE[lang]} />
+    <meta property="og:locale:alternate" content={OG_LOCALE[lang === 'pt' ? 'en' : 'pt']} />
     <meta property="og:site_name" content={SITE.nome} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
@@ -53,7 +61,7 @@ const ogImage = new URL('/og.png', Astro.site);
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Pedro Câmara" />
+    <meta property="og:image:alt" content={t.meta.ogImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
@@ -62,7 +70,7 @@ const ogImage = new URL('/og.png', Astro.site);
     <ClientRouter />
   </head>
   <body>
-    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <a class="skip-link" href="#conteudo">{t.skipLink}</a>
     <Header />
     <main id="conteudo" transition:name="main" transition:animate={pageTransition}>
       <slot />

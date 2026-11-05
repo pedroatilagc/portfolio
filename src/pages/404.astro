@@ -1,18 +1,25 @@
 ---
 import Base from '../layouts/Base.astro';
+import { ui } from '../i18n';
+
+// A Vercel serve um único 404.html para o site todo (inclusive /en/...), então a página é
+// em português com uma linha em inglês apontando para a versão em inglês.
+const t = ui.pt.notFound;
+const en = ui.en.notFound;
 ---
 
-<Base title="Página não encontrada" description="Esta página não existe.">
+<Base title={t.title} description={t.description}>
   <section class="container nf">
     <div class="term" aria-hidden="true">
       <span class="p">&gt; </span>page not found<span class="u">_</span>
     </div>
-    <span class="eyebrow">Erro 404</span>
-    <h1>Página não encontrada</h1>
-    <p>O endereço pode ter mudado, ou nunca ter existido.</p>
+    <span class="eyebrow">{t.eyebrow}</span>
+    <h1>{t.title}</h1>
+    <p>{t.text}</p>
+    <p class="en" lang="en">{en.title}. <a href="/en/">{en.home} →</a></p>
     <div class="ctas">
-      <a class="btn btn-primary" href="/">Voltar ao início <span class="arrow arrow-x" aria-hidden="true">→</span></a>
-      <a class="btn btn-secondary" href="/#projetos">Ver projetos</a>
+      <a class="btn btn-primary" href="/">{t.home} <span class="arrow arrow-x" aria-hidden="true">→</span></a>
+      <a class="btn btn-secondary" href="/#projetos">{t.projects}</a>
     </div>
   </section>
 </Base>
@@ -45,6 +52,14 @@ import Base from '../layouts/Base.astro';
     50% {
       opacity: 0;
     }
+  }
+  .en {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+  .en a {
+    color: var(--text-strong);
   }
   .ctas {
     display: flex;

@@ -1,8 +1,10 @@
 ---
 // Substitui o <table> do Markdown: envolve num contêiner que rola na horizontal,
 // para tabelas largas não criarem scroll horizontal na página inteira no mobile.
+import { getLang, ui } from '../i18n';
+const label = ui[getLang(Astro.currentLocale)].table;
 ---
 
-<div class="table-wrap" tabindex="0" role="region" aria-label="Tabela (role para os lados se necessário)">
+<div class="table-wrap" tabindex="0" role="region" aria-label={label}>
   <table {...Astro.props}><slot /></table>
 </div>

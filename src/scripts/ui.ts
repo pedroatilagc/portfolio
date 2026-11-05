@@ -1,4 +1,5 @@
 import { tween, prefersReducedMotion } from './anim';
+import { docLang, ui, translatePath } from '../i18n';
 
 /* ---------- Header: borda/fundo só depois de rolar ---------- */
 export function initHeader(): () => void {
@@ -6,12 +7,18 @@ export function initHeader(): () => void {
   if (!header) return () => {};
   const update = () => header.classList.toggle('is-scrolled', window.scrollY > 8);
   update();
+  // O header é persistido entre páginas do mesmo idioma (transition:persist), então o
+  // link do toggle PT|EN ficaria apontando para a página onde ele foi criado.
+  // A cada navegação, recalcula: a mesma página atual, no outro idioma.
+  const toggle = header.querySelector<HTMLAnchorElement>('.lang a');
+  if (toggle) toggle.href = translatePath(location.pathname, docLang() === 'pt' ? 'en' : 'pt') + location.hash;
   window.addEventListener('scroll', update, { passive: true });
   return () => window.removeEventListener('scroll', update);
 }
 
 /* ---------- Botão copiar nos blocos de código (Shiki) ---------- */
 export function initCopyButtons(): void {
+  const t = ui[docLang()].code;
   document.querySelectorAll<HTMLPreElement>('.prose pre.astro-code').forEach((pre) => {
     if (pre.parentElement?.classList.contains('code-block')) return;
     const wrap = document.createElement('div');
@@ -22,19 +29,19 @@ export function initCopyButtons(): void {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'copy-btn';
-    btn.textContent = 'copiar';
-    btn.setAttribute('aria-label', 'Copiar código');
+    btn.textContent = t.copy;
+    btn.setAttribute('aria-label', t.aria);
     btn.addEventListener('click', async () => {
       const text = pre.querySelector('code')?.innerText ?? pre.innerText;
       try {
         await navigator.clipboard.writeText(text);
-        btn.textContent = 'copiado';
+        btn.textContent = t.copied;
         btn.dataset.copied = '';
       } catch {
-        btn.textContent = 'erro';
+        btn.textContent = t.error;
       }
       setTimeout(() => {
-        btn.textContent = 'copiar';
+        btn.textContent = t.copy;
         delete btn.dataset.copied;
       }, 1600);
     });

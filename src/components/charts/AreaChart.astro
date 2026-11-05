@@ -4,6 +4,7 @@
  * Os pontos ficam no centro de cada dia, alinhados com os rótulos do eixo X.
  */
 import './chart.css';
+import { getLang, ui } from '../../i18n';
 import { escalaY, escalaLinear, formatar, caminhoMonotone, r, type Formato } from './scale';
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   id: string; // para o id único do gradiente
 }
 const { titulo, nomeSerie, cor, pontos, yFormat, id } = Astro.props;
+const t = ui[getLang(Astro.currentLocale)].charts;
 
 const W = 600;
 const H = 200;
@@ -31,7 +33,7 @@ const area = `${linha}L${r(coords[coords.length - 1][0])},${H}L${r(coords[0][0])
 const gradId = `grad-${id}`;
 const iPico = valores.indexOf(Math.max(...valores));
 const soma = valores.reduce((a, b) => a + b, 0);
-const ariaLabel = `${titulo}, de ${pontos[0].dia} a ${pontos[pontos.length - 1].dia}, em gráfico de área. Soma de ${formatar(soma, yFormat)}; pico em ${pontos[iPico].dia}, com ${formatar(valores[iPico], yFormat)}.`;
+const ariaLabel = t.areaAria(titulo, pontos[0].dia, pontos[pontos.length - 1].dia, formatar(soma, yFormat), pontos[iPico].dia, formatar(valores[iPico], yFormat));
 ---
 
 <div class="ch" data-chart>
@@ -91,7 +93,7 @@ const ariaLabel = `${titulo}, de ${pontos[0].dia} a ${pontos[pontos.length - 1].
 
   <div class="sr-only"><table>
     <caption>{titulo}</caption>
-    <thead><tr><th scope="col">Dia</th><th scope="col">{nomeSerie}</th></tr></thead>
+    <thead><tr><th scope="col">{t.day}</th><th scope="col">{nomeSerie}</th></tr></thead>
     <tbody>
       {pontos.map((p) => <tr><th scope="row">{p.dia}</th><td>{formatar(p.valor, yFormat)}</td></tr>)}
     </tbody>

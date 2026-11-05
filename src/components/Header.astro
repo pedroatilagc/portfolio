@@ -1,30 +1,60 @@
 ---
 import { SITE } from '../data/site';
 import Icon from './Icon.astro';
+import { getLang, ui, homeUrl, sectionUrl, translatePath, HTML_LANG } from '../i18n';
+
+const lang = getLang(Astro.currentLocale);
+const t = ui[lang];
+const other = lang === 'pt' ? 'en' : 'pt';
+// A mesma página no outro idioma (ex.: /projetos/x/ ↔ /en/projects/x/).
+const otherHref = translatePath(Astro.url.pathname, other);
+const LABEL = { pt: 'PT', en: 'EN' } as const;
 ---
 
-<header class="site-header" data-site-header transition:persist>
+<!-- persist por idioma: entre páginas do mesmo idioma o header não pisca;
+     ao trocar de idioma ele é substituído pelo header traduzido. -->
+<header class="site-header" data-site-header transition:persist={`site-header-${lang}`}>
   <div class="container bar">
-    <a class="wordmark" href="/" aria-label="Pedro Câmara, página inicial">Pedro Câmara</a>
-    <nav aria-label="Principal">
+    <a class="wordmark" href={homeUrl(lang)} aria-label={t.nav.home}>Pedro Câmara</a>
+    <nav aria-label={t.nav.label}>
       <ul>
-        <li><a href="/#projetos">Projetos</a></li>
-        <li><a href="/#sobre">Sobre</a></li>
-        <li>
-          <a href={SITE.github} target="_blank" rel="noopener" aria-label="GitHub (abre em nova aba)">
+        <li><a href={sectionUrl(lang, 'projetos')}>{t.nav.projects}</a></li>
+        <li><a href={sectionUrl(lang, 'sobre')}>{t.nav.about}</a></li>
+        <li class="social">
+          <a href={SITE.github} target="_blank" rel="noopener" aria-label={`GitHub ${t.nav.newTab}`}>
             <Icon name="github" />
           </a>
         </li>
         {
           SITE.linkedin && (
-            <li>
-              <a href={SITE.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn (abre em nova aba)">
+            <li class="social">
+              <a href={SITE.linkedin} target="_blank" rel="noopener" aria-label={`LinkedIn ${t.nav.newTab}`}>
                 <Icon name="linkedin" />
               </a>
             </li>
           )
         }
-        <!-- TODO: Pedro preencher — LinkedIn em src/data/site.ts -->
+        <li class="lang" role="group" aria-label={t.langToggle.label}>
+          {
+            (['pt', 'en'] as const).map((l) =>
+              l === lang ? (
+                <span class="lang-opt is-current" aria-current="true">
+                  {LABEL[l]}
+                </span>
+              ) : (
+                <a
+                  class="lang-opt"
+                  href={otherHref}
+                  hreflang={HTML_LANG[l]}
+                  lang={HTML_LANG[l]}
+                  aria-label={t.langToggle.switchTo}
+                >
+                  {LABEL[l]}
+                </a>
+              ),
+            )
+          }
+        </li>
       </ul>
     </nav>
   </div>
@@ -65,6 +95,9 @@ import Icon from './Icon.astro';
   .wordmark:hover {
     color: var(--text-strong);
   }
+  li {
+    flex-shrink: 0;
+  }
   ul {
     display: flex;
     align-items: center;
@@ -85,5 +118,72 @@ import Icon from './Icon.astro';
   }
   nav a:hover {
     color: var(--accent);
+  }
+
+  /* Toggle PT | EN: o idioma atual em destaque, o outro é o link.
+     Mono e pequeno, no mesmo espírito da tag do hero. */
+  .lang {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1;
+  }
+  .lang-opt {
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.1rem;
+    min-height: 1.75rem;
+    padding: 0 0.45rem;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+  }
+  nav a.lang-opt {
+    min-height: 1.75rem;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    transition:
+      color 200ms var(--ease-out),
+      background-color 200ms var(--ease-out);
+  }
+  nav a.lang-opt:hover {
+    color: var(--text-strong);
+    background: var(--surface-2);
+  }
+  /* área de toque ≥ 44px sem aumentar o desenho do toggle */
+  nav a.lang-opt {
+    position: relative;
+  }
+  nav a.lang-opt::after {
+    content: '';
+    position: absolute;
+    inset: -8px -4px;
+  }
+  /* Telas estreitas: o toggle entrou no header, então o espaçamento encolhe para caber em 375px. */
+  @media (max-width: 420px) {
+    /* GitHub e LinkedIn continuam acessíveis no hero (home) e no rodapé (todas as páginas). */
+    .social {
+      display: none;
+    }
+    .bar {
+      gap: 0.5rem;
+    }
+    ul {
+      gap: 0.7rem;
+    }
+    .wordmark {
+      font-size: 1.05rem;
+    }
+    .lang-opt {
+      min-width: 1.8rem;
+      padding: 0 0.3rem;
+    }
+  }
+  .is-current {
+    color: var(--text-strong);
+    background: var(--surface-2);
   }
 </style>

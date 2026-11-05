@@ -7,12 +7,16 @@
  *   então o heatmap custa só uma parada no Tab.
  */
 
-const dateFmt = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+import { docLang, ui, INTL_LOCALE } from '../i18n';
 
+// Idioma lido do <html lang> no momento do uso (muda ao navegar entre / e /en/).
 function label(rect: SVGRectElement): string {
+  const lang = docLang();
   const n = Number(rect.dataset.c ?? 0);
-  const date = dateFmt.format(new Date(`${rect.dataset.d}T00:00:00Z`));
-  return `${n} ${n === 1 ? 'contribuição' : 'contribuições'} em ${date}`;
+  const date = new Intl.DateTimeFormat(INTL_LOCALE[lang], { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
+    new Date(`${rect.dataset.d}T00:00:00Z`),
+  );
+  return ui[lang].github.tooltip(n, date);
 }
 
 function shiftDate(iso: string, days: number): string {

@@ -31,7 +31,8 @@
     } catch (e) {
       played = true; // sessionStorage bloqueado (modo privado): trata como "já tocou"
     }
-    if (location.pathname === '/' && !played && !reduce) {
+    var isHome = location.pathname === '/' || location.pathname === '/en/' || location.pathname === '/en';
+    if (isHome && !played && !reduce) {
       html.classList.add('intro-loading');
     }
 

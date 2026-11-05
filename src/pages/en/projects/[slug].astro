@@ -1,0 +1,22 @@
+---
+import { getCollection } from 'astro:content';
+import ProjectPage from '../../../views/ProjectPage.astro';
+import { langOf, slugOf } from '../../../i18n';
+
+/**
+ * Rota dinâmica (/en/projects/<slug>/): o [slug] no nome do arquivo é um parâmetro.
+ * Como o site é estático, o Astro precisa saber NO BUILD quais páginas gerar:
+ * getStaticPaths devolve uma lista de { params, props }, e o Astro roda este
+ * componente uma vez para cada item. Aqui entram só os projetos em 'en'
+ * (src/content/projetos/en/).
+ */
+export async function getStaticPaths() {
+  const projetos = await getCollection('projetos', (p) => langOf(p.id) === 'en');
+  return projetos.map((projeto) => ({
+    params: { slug: slugOf(projeto.id) },
+    props: { projeto },
+  }));
+}
+---
+
+<ProjectPage projeto={Astro.props.projeto} />

@@ -1,5 +1,5 @@
 {
-  "total": 152,
+  "total": 153,
   "weeks": [
     [
       {
@@ -2316,8 +2316,8 @@
       },
       {
         "date": "2026-11-05",
-        "count": 1,
-        "level": 1,
+        "count": 2,
+        "level": 2,
         "weekday": 4
       }
     ]
@@ -2325,28 +2325,28 @@
   "activity": [
     {
       "kind": "push",
-      "text": "Push em senderix-eval",
+      "repo": "senderix-eval",
       "url": "https://github.com/pedroatilagc/senderix-eval",
       "date": "2026-11-01T14:31:48Z"
     },
     {
       "kind": "pr-merge",
-      "text": "PR mesclado em senderix-eval",
+      "repo": "senderix-eval",
       "url": "https://github.com/pedroatilagc/senderix-eval/pulls",
       "date": "2026-11-01T14:31:46Z"
     },
     {
       "kind": "pr-open",
-      "text": "PR aberto em senderix-eval",
+      "repo": "senderix-eval",
       "url": "https://github.com/pedroatilagc/senderix-eval/pulls",
       "date": "2026-11-01T14:31:24Z"
     },
     {
       "kind": "push",
-      "text": "Push em portfolio",
+      "repo": "portfolio",
       "url": "https://github.com/pedroatilagc/portfolio",
       "date": "2026-10-31T21:08:06Z"
     }
   ],
-  "fetchedAt": "2026-11-05T17:18:27.089Z"
+  "fetchedAt": "2026-11-05T17:54:41.272Z"
 }
